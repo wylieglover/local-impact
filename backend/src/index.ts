@@ -40,4 +40,6 @@ app.use(errorHandler);
 app.listen(env.PORT, () => {
   logger.info(`Local Impact API is live on ${env.BACKEND_URL}`);
   logger.info(`Environment: ${env.NODE_ENV}`);
+}).on('error', (err) => {
+  console.error('Failed to start server:', err);
 });
