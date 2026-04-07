@@ -26,8 +26,9 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json()); 
 
-// Health Check
-app.get("/health", (req, res) => {
+// Health Check - allow all origins so uptime monitors can ping
+app.options("/health", cors());
+app.get("/health", cors(), (req, res) => {
   res.json({ status: "up", timestamp: new Date().toISOString() });
 });
 
