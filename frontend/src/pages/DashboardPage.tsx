@@ -16,7 +16,7 @@ export default function DashboardPage() {
 
   return (
     // changed to fixed inset-0 to ensure it fills the literal screen height
-    <div className="fixed inset-0 w-full h-full overflow-hidden">
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-slate-900">
       
       {/* Logout Overlay */}
       <div 

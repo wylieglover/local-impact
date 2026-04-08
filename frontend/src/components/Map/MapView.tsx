@@ -132,7 +132,7 @@ export default function MapView() {
   )
 
   return (
-    <div className="relative w-full h-screen">
+    <div className="relative w-full h-full">
       <PointsCounter />
       <MapControls loading={loadingNearby} error={nearbyError} onRetry={refresh} />
       
