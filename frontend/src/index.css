@@ -18,7 +18,6 @@ body {
     left: 0;
     right: 0;
     height: env(safe-area-inset-top);
-    backdrop-filter: blur(10px);
     mask: linear-gradient(
       to bottom,
       black,
