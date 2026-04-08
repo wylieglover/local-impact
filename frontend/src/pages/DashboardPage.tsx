@@ -21,9 +21,9 @@ export default function DashboardPage() {
       <div 
         style={{ 
           position: "absolute", 
-          top: "20px", 
-          right: "20px", 
-          zIndex: 1000 // Ensure it sits above the map
+          top: "62px", 
+          right: "45px", 
+          zIndex: 1000
         }}
       >
         <button

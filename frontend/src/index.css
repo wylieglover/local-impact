@@ -3,10 +3,12 @@
 html {
   min-height: calc(100% + env(safe-area-inset-top));
   background-color: #ffffff;
+  overflow: hidden;
 }
 
 body {
   padding-bottom: env(safe-area-inset-bottom);
+  overflow: hidden;
 }
 
 @supports (padding: env(safe-area-inset-top)) {
