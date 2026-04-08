@@ -20,6 +20,7 @@ import IssueClusterMarker from './IssueClusterMarker'
 import MapControls from './MapControls'
 
 import { useAuthStore } from '../../stores/auth.store'
+import { useDeviceFacing } from '../../hooks/useDeviceFacing'
 import { useIssues } from '../../hooks/useIssues'
 import { useNearbyIssues } from '../../hooks/useNearbyIssues'
 import { usePlayerLocation } from '../../hooks/usePlayerLocation'
@@ -46,6 +47,7 @@ export default function MapView() {
   const user = useAuthStore((state) => state.user)
   const setAuth = useAuthStore((state) => state.setAuth)
   const { issues, addIssue, mergeIssues, removeIssue } = useIssues()
+  const { facing, requestPermission, permissionState } = useDeviceFacing()
 
   const { loading: loadingNearby, error: nearbyError, refresh } = useNearbyIssues(
     userLocation,
@@ -133,6 +135,16 @@ export default function MapView() {
     <div className="relative w-full h-screen">
       <PointsCounter />
       <MapControls loading={loadingNearby} error={nearbyError} onRetry={refresh} />
+      
+      {/* iOS compass permission prompt — only appears when needed */}
+      {permissionState === 'unknown' && (
+        <button
+          onClick={requestPermission}
+          className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-slate-900/90 border border-emerald-500/30 text-emerald-400 text-[10px] font-black tracking-widest uppercase px-4 py-2 rounded-xl backdrop-blur-sm"
+        >
+          Enable Compass
+        </button>
+      )}
 
       <MapGL
         ref={mapRef}
@@ -150,10 +162,10 @@ export default function MapView() {
       >
         <NavigationControl position="top-right" />
         <AttributionControl position="bottom-right" compact />
-
+        
         {/* Self marker */}
         <Marker latitude={userLocation.latitude} longitude={userLocation.longitude} anchor="center">
-          <PlayerMarker />
+          <PlayerMarker facing={facing} />
         </Marker>
 
         {/* Other players — rendered beneath issues so issue markers stay tappable */}
