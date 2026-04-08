@@ -1,23 +1,42 @@
+import { useRef, useState, useEffect } from 'react'
+
 type Props = {
   facing: number | null
 }
 
 export default function PlayerMarker({ facing }: Props) {
+  const accumulated = useRef<number | null>(null)
+  const [rotation, setRotation] = useState(0)
+
+  useEffect(() => {
+    if (facing == null) return
+
+    // First reading — just set it directly, no transition yet
+    if (accumulated.current === null) {
+      accumulated.current = facing
+      setRotation(facing)
+      return
+    }
+
+    // Calculate shortest angular delta (-180 to +180)
+    let delta = facing - (accumulated.current % 360)
+    if (delta > 180) delta -= 360
+    if (delta < -180) delta += 360
+
+    // Accumulate rather than set — CSS transitions between
+    // these large numbers correctly, always via the short path
+    accumulated.current += delta
+    setRotation(accumulated.current)
+  }, [facing])
+
   return (
     <div className="relative flex items-center justify-center">
-      {/* 1. Detection Radius */}
       <div className="absolute w-32 h-32 rounded-full border border-emerald-500/20 bg-emerald-500/5 animate-[ping_3s_linear_infinite]" />
-
-      {/* 2. Outer Rotating HUD Ring */}
       <div className="absolute w-12 h-12 border-2 border-dashed border-emerald-400/40 rounded-full animate-[spin_10s_linear_infinite]" />
-
-      {/* 3. Middle Static HUD Ring */}
       <div className="absolute w-10 h-10 border border-emerald-500/30 rounded-full" />
 
-      {/* 4. The Operator Core */}
       <div className="relative z-10 w-9 h-9 flex items-center justify-center">
         <div className="absolute inset-0 bg-emerald-500 blur-md opacity-40 animate-pulse" />
-
         <div className="relative w-full h-full bg-slate-900 border-2 border-emerald-400 rounded-xl rotate-45 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.5)]">
           <svg
             viewBox="0 0 24 24"
@@ -28,19 +47,17 @@ export default function PlayerMarker({ facing }: Props) {
           </svg>
         </div>
 
-        {/* Directional arrow — orbits the core based on facing */}
         <div
           className="absolute inset-0 flex items-start justify-center"
           style={{
-            transform: `rotate(${facing ?? 0}deg)`,
-            transition: facing != null ? 'transform 0.3s ease-out' : 'none',
+            transform: `rotate(${rotation}deg)`,
+            transition: accumulated.current !== null ? 'transform 0.3s ease-out' : 'none',
           }}
         >
-          <div className="w-0 h-0 -translate-y-1 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]" />
+          <div className="w-0 h-0 -translate-y-3 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]" />
         </div>
       </div>
 
-      {/* 5. Operator Label */}
       <div className="absolute top-8 whitespace-nowrap">
         <span className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.2em] bg-slate-900/80 px-2 py-0.5 rounded border border-emerald-500/20 backdrop-blur-sm">
           Signal_Origin
