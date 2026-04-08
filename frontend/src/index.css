@@ -1,18 +1,30 @@
 @import "tailwindcss";
 
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  /* svh = Small Viewport Height (ignores the status/home bars) */
-  /* dvh = Dynamic Viewport Height (adjusts as bars appear/disappear) */
-  height: 100dvh; 
-  overflow: hidden;
-  background-color: #0f172a; 
+html {
+  min-height: calc(100% + env(safe-area-inset-top));
+  background-color: #ffffff;
 }
 
-/* Ensure the map stays at the literal pixel edges */
-.mapboxgl-map {
-  position: absolute !important;
-  inset: 0 !important;
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@supports (padding: env(safe-area-inset-top)) {
+  body::before {
+    content: '';
+    z-index: 999;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    backdrop-filter: blur(10px);
+    mask: linear-gradient(
+      to bottom,
+      black,
+      black 50%,
+      rgba(0, 0, 0, 0.7) 75%,
+      rgba(0, 0, 0, 0) 100%
+    );
+  }
 }
