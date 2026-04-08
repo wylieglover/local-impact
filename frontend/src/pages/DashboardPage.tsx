@@ -1,5 +1,5 @@
 import MapView from "../components/Map/MapView"
-import { authApi } from "../api/auth.api" // Adjust path as needed
+import { authApi } from "../api/auth.api"
 import { useNavigate } from "react-router-dom"
 
 export default function DashboardPage() {
@@ -8,7 +8,6 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     try {
       await authApi.logout()
-      // Redirect to login or home after successful logout
       navigate("/login") 
     } catch (error) {
       console.error("Logout failed:", error)
@@ -16,18 +15,23 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden">
-      {/* Logout Overlay - Adjusted for Safe Area */}
+    // changed to fixed inset-0 to ensure it fills the literal screen height
+    <div className="fixed inset-0 w-full h-full overflow-hidden">
+      
+      {/* Logout Overlay */}
       <div 
         style={{ 
           position: "absolute", 
-          // Use env() here to push the button down past the Dynamic Island
-          top: "calc(env(safe-area-inset-top) + 10px)", 
-          right: "50px", 
+          // This tells iOS: "Start at the bottom of the notch, then add 10px"
+          top: "calc(env(safe-area-inset-top) + 15px)", 
+          right: "45px", 
           zIndex: 1000 
         }}
       >
-        <button onClick={handleLogout} className="bg-red-500 text-white p-2 rounded-md font-semibold">
+        <button
+          onClick={handleLogout}
+          className="px-4 py-2 bg-red-500 text-white border-none rounded-md cursor-pointer font-semibold shadow-md active:opacity-80 transition-opacity"
+        >
           Logout
         </button>
       </div>
