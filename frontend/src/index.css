@@ -3,6 +3,7 @@
 html {
   min-height: calc(100% + env(safe-area-inset-top));
   background-color: #ffffff;
+  position: fixed;
   overflow: hidden;
 }
 
