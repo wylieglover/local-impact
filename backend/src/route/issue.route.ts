@@ -53,7 +53,7 @@ issuesRoutes.patch(
 issuesRoutes.delete(
   "/:id",
   validate({ params: idParamSchema }),
-  authorize("admin"),
+  authorize("reporter", "moderator", "admin"),
   deleteIssue
 );
 

@@ -199,19 +199,27 @@ export const updateIssueStatus = asyncHandler(async (req, res) => {
 /**
  * @route   DELETE /api/issues/:id
  * @desc    Deletes an issue.
- * @access  Admin only
+ * @access  Reporter, Moderator, Admin
  */
 export const deleteIssue = asyncHandler(async (req, res) => {
   const { id } = res.locals.params as { id: string };
+  const user = res.locals.user as TokenPayload;
 
-  const [deleted] = await db
-    .delete(issues)
-    .where(eq(issues.id, id))
-    .returning({ id: issues.id });
+  const [issue] = await db
+    .select({ userId: issues.userId })
+    .from(issues)
+    .where(eq(issues.id, id));
 
-  if (!deleted) {
+  if (!issue) {
     throw new AppError(404, "NOT_FOUND", "Issue not found");
   }
+
+  // Reporters can only delete their own issues
+  if (user.role === "reporter" && issue.userId !== user.userId) {
+    throw new AppError(403, "FORBIDDEN", "You can only delete your own issues");
+  }
+
+  await db.delete(issues).where(eq(issues.id, id));
 
   return res.status(204).send();
 });
