@@ -23,7 +23,7 @@ export function useNearbyIssues(
   onFetched: (issues: Issue[]) => void,
   options: UseNearbyIssuesOptions = {}
 ): UseNearbyIssuesReturn {
-  const { radius = 1609, debounceMs = 800 } = options
+  const { radius = 2000, debounceMs = 600 } = options
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
