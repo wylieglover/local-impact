@@ -1,5 +1,5 @@
 import MapView from "../components/Map/MapView"
-import { authApi } from "../api/auth.api"
+import { authApi } from "../api/auth.api" // Adjust path as needed
 import { useNavigate } from "react-router-dom"
 
 export default function DashboardPage() {
@@ -8,6 +8,7 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     try {
       await authApi.logout()
+      // Redirect to login or home after successful logout
       navigate("/login") 
     } catch (error) {
       console.error("Logout failed:", error)
@@ -15,22 +16,28 @@ export default function DashboardPage() {
   }
 
   return (
-    // changed to fixed inset-0 to ensure it fills the literal screen height
-    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-slate-900">
-      
+    <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
       {/* Logout Overlay */}
       <div 
         style={{ 
           position: "absolute", 
-          // This tells iOS: "Start at the bottom of the notch, then add 10px"
-          top: "calc(env(safe-area-inset-top) + 15px)", 
-          right: "45px", 
-          zIndex: 1000 
+          top: "20px", 
+          right: "20px", 
+          zIndex: 1000 // Ensure it sits above the map
         }}
       >
         <button
           onClick={handleLogout}
-          className="px-4 py-2 bg-red-500 text-white border-none rounded-md cursor-pointer font-semibold shadow-md active:opacity-80 transition-opacity"
+          style={{
+            padding: "8px 16px",
+            backgroundColor: "#ef4444",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontWeight: "600",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+          }}
         >
           Logout
         </button>

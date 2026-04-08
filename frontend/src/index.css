@@ -1,21 +1,11 @@
 @import "tailwindcss";
 
-/* 1. Reset the foundation */
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  /* Using fixed prevents the 'bounce' and the 'scrolling to fix' issue */
-  position: fixed; 
-  overflow: hidden;
-  background-color: #0f172a; /* Match this to your Map's dark theme */
+html {
+  min-height: calc(100% + env(safe-area-inset-top));
+  background-color: #ffffff;
 }
 
-/* 2. Fix for Mapbox specifically */
-.mapboxgl-map {
-  position: absolute !important;
-  top: 0;
-  bottom: 0;
-  width: 100%;
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
