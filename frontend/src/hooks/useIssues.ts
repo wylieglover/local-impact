@@ -14,9 +14,9 @@ export function useIssues() {
 
   const mergeIssues = useCallback((incoming: Issue[]) => {
     setIssues((prev) => {
-      const existingIds = new Set(prev.map((i) => i.id))
-      const newOnes = incoming.filter((i) => !existingIds.has(i.id))
-      return [...prev, ...newOnes]
+      const existingMap = new Map(prev.map((i) => [i.id, i]))
+      incoming.forEach((i) => existingMap.set(i.id, i))
+      return Array.from(existingMap.values())
     })
   }, [])
 
