@@ -9,6 +9,7 @@ import { logger } from "./util/logger.js";
 import { authRoutes } from "./route/auth.route.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { issuesRoutes } from "./route/issue.route.js";
+import { userRoutes } from "./route/user.route.js";
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.get("/health", cors(), (req, res) => {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/issues", issuesRoutes);
+app.use("/api/users", userRoutes);
 
 app.use(errorHandler);
 
