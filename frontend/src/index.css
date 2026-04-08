@@ -1,11 +1,24 @@
 @import "tailwindcss";
 
-html {
-  min-height: calc(100% + env(safe-area-inset-top));
-  background-color: #ffffff;
+/* Force the literal root to be the full glass of the phone */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  position: fixed; /* CRITICAL: Prevents the status bar from creating a gap */
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  /* Change this to match your map's dark gray/blue color to hide the gap */
+  background-color: #0f172a; 
 }
 
-body {
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
+/* Force Mapbox to ignore any internal flex/padding constraints */
+.mapboxgl-map {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
 }
