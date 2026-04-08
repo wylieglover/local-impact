@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { usersApi } from "../api/users.api"
+import { getDistanceMeters } from '../utils/geo'
 
 // Only push a location update when the user has moved at least this far
 const MIN_DISTANCE_METERS = 10
@@ -10,26 +11,6 @@ type UserLocation = { latitude: number; longitude: number }
 type UsePlayerLocationReturn = {
   userLocation: UserLocation | null
   locationError: string | null
-}
-
-/**
- * Haversine formula — returns distance in meters between two coordinates.
- */
-function getDistanceMeters(a: UserLocation, b: UserLocation): number {
-  const R = 6371000 // Earth radius in meters
-  const toRad = (deg: number) => (deg * Math.PI) / 180
-
-  const dLat = toRad(b.latitude - a.latitude)
-  const dLng = toRad(b.longitude - a.longitude)
-
-  const sinDLat = Math.sin(dLat / 2)
-  const sinDLng = Math.sin(dLng / 2)
-
-  const a2 =
-    sinDLat * sinDLat +
-    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * sinDLng * sinDLng
-
-  return R * 2 * Math.atan2(Math.sqrt(a2), Math.sqrt(1 - a2))
 }
 
 function smooth(previous: UserLocation, next: UserLocation): UserLocation {
