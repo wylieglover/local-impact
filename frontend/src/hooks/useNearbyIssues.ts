@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { issuesApi } from '../api/issues.api'
 import type { Issue } from '../api/issues.api'
+import { getDistanceMeters } from '../utils/geo'
+
+const MIN_FETCH_DISTANCE_METERS = 100
 
 type Location = {
   latitude: number
@@ -9,7 +12,6 @@ type Location = {
 
 type UseNearbyIssuesOptions = {
   radius?: number
-  debounceMs?: number
 }
 
 type UseNearbyIssuesReturn = {
@@ -23,15 +25,16 @@ export function useNearbyIssues(
   onFetched: (issues: Issue[]) => void,
   options: UseNearbyIssuesOptions = {}
 ): UseNearbyIssuesReturn {
-  const { radius = 2000, debounceMs = 600 } = options
+  const { radius = 2000 } = options
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const onFetchedRef = useRef(onFetched)
 
-  useEffect(() => {
-    onFetchedRef.current = onFetched
-  }, [onFetched])
+  const onFetchedRef = useRef(onFetched)
+  useEffect(() => { onFetchedRef.current = onFetched }, [onFetched])
+
+  // Last location we actually fetched from — only update when
+  // user has moved MIN_FETCH_DISTANCE_METERS from this point
+  const lastFetchLocation = useRef<Location | null>(null)
 
   const fetchIssues = useCallback(async (loc: Location) => {
     setLoading(true)
@@ -43,6 +46,7 @@ export function useNearbyIssues(
         radius,
       })
       onFetchedRef.current(nearby)
+      lastFetchLocation.current = loc
     } catch (err: any) {
       setError(err.response?.data?.message ?? 'Failed to load nearby issues')
     } finally {
@@ -52,15 +56,17 @@ export function useNearbyIssues(
 
   useEffect(() => {
     if (!location) return
-    if (debounceTimer.current) clearTimeout(debounceTimer.current)
-    debounceTimer.current = setTimeout(() => {
-      fetchIssues(location)
-    }, debounceMs)
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current)
-    }
-  }, [location?.latitude, location?.longitude, fetchIssues, debounceMs])
 
+    const last = lastFetchLocation.current
+    const movedFarEnough =
+      !last || getDistanceMeters(last, location) >= MIN_FETCH_DISTANCE_METERS
+
+    if (!movedFarEnough) return
+
+    fetchIssues(location)
+  }, [location?.latitude, location?.longitude, fetchIssues])
+
+  // Manual refresh bypasses the distance gate — useful for the retry button
   const refresh = useCallback(() => {
     if (location) fetchIssues(location)
   }, [location, fetchIssues])
