@@ -16,29 +16,18 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
-      {/* Logout Overlay */}
+    <div className="relative w-screen h-screen overflow-hidden">
+      {/* Logout Overlay - Adjusted for Safe Area */}
       <div 
         style={{ 
           position: "absolute", 
-          top: "20px", 
-          right: "20px", 
-          zIndex: 1000 // Ensure it sits above the map
+          // Use env() here to push the button down past the Dynamic Island
+          top: "calc(env(safe-area-inset-top) + 10px)", 
+          right: "50px", 
+          zIndex: 1000 
         }}
       >
-        <button
-          onClick={handleLogout}
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "#ef4444",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontWeight: "600",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
-          }}
-        >
+        <button onClick={handleLogout} className="bg-red-500 text-white p-2 rounded-md font-semibold">
           Logout
         </button>
       </div>
