@@ -45,14 +45,16 @@ export function usePlayerLocation(): UsePlayerLocationReturn {
 
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
-        // Skip readings that are too uncertain — GPS cold start
-        // can return positions wildly off until it gets a proper fix
-        if (position.coords.accuracy > 30) return
-
         const next: UserLocation = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
         }
+
+        // Always accept the first reading so we get past the loading screen.
+        // After that, filter out inaccurate readings — desktop/WiFi geolocation
+        // typically returns 100-1000m accuracy which we don't want moving the marker
+        const isFirstReading = lastSentLocation.current === null
+        if (!isFirstReading && position.coords.accuracy > 30) return
 
         setUserLocation((prev) => prev ? smooth(prev, next) : next)
 
