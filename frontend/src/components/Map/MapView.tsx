@@ -1,6 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-// 1. Renamed 'Map' to 'MapGL' to avoid conflict with JS built-in Map
-import MapGL, { Marker, NavigationControl, AttributionControl } from 'react-map-gl/mapbox'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import MapGL, {
+  Marker,
+  NavigationControl,
+  AttributionControl,
+  type MapRef,
+} from 'react-map-gl/mapbox'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import type { MapMouseEvent } from 'react-map-gl/mapbox'
 
@@ -10,6 +14,7 @@ import IssueForm from '../Issues/IssueForm'
 import IssueDetail from '../Issues/IssueDetail'
 import PointsCounter from '../UI/PointsCounter'
 import PlayerMarker from './PlayerMarker'
+import OtherPlayerMarker from './OtherPlayerMarker'
 import IssueMarker from './IssueMarker'
 import IssueClusterMarker from './IssueClusterMarker'
 import MapControls from './MapControls'
@@ -17,27 +22,30 @@ import MapControls from './MapControls'
 import { useAuthStore } from '../../stores/auth.store'
 import { useIssues } from '../../hooks/useIssues'
 import { useNearbyIssues } from '../../hooks/useNearbyIssues'
+import { usePlayerLocation } from '../../hooks/usePlayerLocation'
+import { useNearbyPlayers } from '../../hooks/useNearbyPlayers'
 import { issuesApi } from '../../api/issues.api'
 import type { Issue } from '../../api/issues.api'
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string
 
-type UserLocation = { latitude: number; longitude: number }
-
 export default function MapView() {
-  const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
-  const [locationError, setLocationError] = useState<string | null>(null)
-  const [pendingPin, setPendingPin] = useState<UserLocation | null>(null)
-  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
+  // ✅ Fix 1: usePlayerLocation replaces the one-shot getCurrentPosition —
+  // watchPosition runs continuously so the marker follows the user as they move
+  const { userLocation, locationError } = usePlayerLocation()
 
+  const [pendingPin, setPendingPin] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [zoom, setZoom] = useState(15)
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null)
 
-  const mapRef = useRef<any>(null)
+  // ✅ Fix 2: MapRef instead of any — gives us typed access to getMap(),
+  // getBounds(), easeTo(), etc. without casting
+  const mapRef = useRef<MapRef>(null)
 
   const user = useAuthStore((state) => state.user)
   const setAuth = useAuthStore((state) => state.setAuth)
-  const { issues, addIssue, mergeIssues } = useIssues()
+  const { issues, addIssue, mergeIssues, removeIssue } = useIssues()
 
   const { loading: loadingNearby, error: nearbyError, refresh } = useNearbyIssues(
     userLocation,
@@ -45,35 +53,16 @@ export default function MapView() {
     { radius: 1609 }
   )
 
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by your browser')
-      return
-    }
+  // Nearby players — polls every 5s automatically inside the hook
+  const { players } = useNearbyPlayers(userLocation, { radius: 1609 })
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        })
-      },
-      () => setLocationError('Unable to retrieve your location'),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    )
-  }, [])
-
-  // 🧠 Logic: Unique by Location to fix "Sector 6" stacking
+  // Supercluster setup
   const points: PointFeature<{ issueId: string }>[] = useMemo(() => {
-    // JS Map constructor now works because the React component is renamed to MapGL
-    const uniqueLocationsMap = new Map<string, Issue>();
-
+    const uniqueLocationsMap = new Map<string, Issue>()
     issues.forEach((issue) => {
-      // Key by coordinate. If 6 issues are at the same spot, only the last one is kept.
-      const locationKey = `${issue.latitude.toFixed(6)},${issue.longitude.toFixed(6)}`;
-      uniqueLocationsMap.set(locationKey, issue);
-    });
-
+      const key = `${issue.latitude.toFixed(6)},${issue.longitude.toFixed(6)}`
+      uniqueLocationsMap.set(key, issue)
+    })
     return Array.from(uniqueLocationsMap.values()).map((issue) => ({
       type: 'Feature' as const,
       properties: { issueId: issue.id },
@@ -81,14 +70,11 @@ export default function MapView() {
         type: 'Point' as const,
         coordinates: [issue.longitude, issue.latitude],
       },
-    }));
-  }, [issues]);
+    }))
+  }, [issues])
 
   const cluster = useMemo(() => {
-    const sc = new Supercluster<{ issueId: string }>({
-      radius: 40,
-      maxZoom: 14,
-    })
+    const sc = new Supercluster<{ issueId: string }>({ radius: 40, maxZoom: 14 })
     sc.load(points)
     return sc
   }, [points])
@@ -102,6 +88,7 @@ export default function MapView() {
     const map = mapRef.current?.getMap()
     if (!map) return
     const b = map.getBounds()
+    if (!b) return
     setBounds([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()])
     setZoom(map.getZoom())
   }, [])
@@ -147,7 +134,6 @@ export default function MapView() {
       <PointsCounter />
       <MapControls loading={loadingNearby} error={nearbyError} onRetry={refresh} />
 
-      {/* 2. Using MapGL instead of Map */}
       <MapGL
         ref={mapRef}
         mapboxAccessToken={MAPBOX_TOKEN}
@@ -165,9 +151,22 @@ export default function MapView() {
         <NavigationControl position="top-right" />
         <AttributionControl position="bottom-right" compact />
 
+        {/* Self marker */}
         <Marker latitude={userLocation.latitude} longitude={userLocation.longitude} anchor="center">
           <PlayerMarker />
         </Marker>
+
+        {/* Other players — rendered beneath issues so issue markers stay tappable */}
+        {players.map((player) => (
+          <Marker
+            key={player.id}
+            latitude={player.latitude}
+            longitude={player.longitude}
+            anchor="center"
+          >
+            <OtherPlayerMarker username={player.username} />
+          </Marker>
+        ))}
 
         {pendingPin && (
           <Marker latitude={pendingPin.latitude} longitude={pendingPin.longitude} anchor="bottom">
@@ -180,7 +179,7 @@ export default function MapView() {
 
           if ('cluster' in clusterItem.properties) {
             const clusterProps = clusterItem.properties as Supercluster.ClusterProperties
-            const clusterId = clusterItem.id as number 
+            const clusterId = clusterItem.id as number
 
             return (
               <Marker key={`cluster-${clusterId}`} longitude={lng} latitude={lat}>
@@ -188,7 +187,8 @@ export default function MapView() {
                   count={clusterProps.point_count}
                   pointCount={clusterProps.point_count}
                   onExpand={() => {
-                    const map = mapRef.current.getMap()
+                    const map = mapRef.current?.getMap()
+                    if (!map) return
                     const expansionZoom = Math.min(
                       cluster.getClusterExpansionZoom(clusterId) ?? 20,
                       20
@@ -215,17 +215,24 @@ export default function MapView() {
                 setPendingPin(null)
               }}
             >
-              <IssueMarker
-                issue={issue}
-                isSelected={selectedIssue?.id === issue.id}
-              />
+              <IssueMarker issue={issue} isSelected={selectedIssue?.id === issue.id} />
             </Marker>
           )
         })}
       </MapGL>
 
       {pendingPin && !selectedIssue && <IssueForm onClose={handleFormClose} onSubmit={handleFormSubmit} />}
-      {selectedIssue && <IssueDetail issue={selectedIssue} onClose={handleDetailClose} />}
+      {selectedIssue && (
+        <IssueDetail
+          issue={selectedIssue}
+          onClose={handleDetailClose}
+          onDelete={async (id) => {
+            await issuesApi.delete(id)
+            removeIssue(id)
+            setSelectedIssue(null)
+          }}
+        />
+      )}
     </div>
   )
 }
