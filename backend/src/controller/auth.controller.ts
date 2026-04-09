@@ -67,7 +67,7 @@ export const register = asyncHandler(async (req, res) => {
       role: newUser.role as "reporter" | "moderator" | "admin",
       points: newUser.points,
       experience: newUser.experience,
-      level: newUser.level ?? 0
+      level: newUser.level
     },
     req,
     res
@@ -133,7 +133,9 @@ export const login = asyncHandler(async (req, res) => {
         id: user.id,
         username: user.username,
         role: user.role,
-        points: user.points
+        points: user.points,
+        experience: user.experience,
+        level: user.level
       },
       accessToken,
     },
