@@ -7,15 +7,15 @@ html {
 
 body {
   position: fixed;
-  /* Pull body up behind the Dynamic Island by exactly its height */
-  top: calc(-1 * var(--safe-top, env(safe-area-inset-top)));
+  top: 0;
   left: 0;
   right: 0;
-  /* Now height covers full physical screen: 894 + 62 = 956px */
-  height: var(--real-height, 100dvh);
+  /* Pull the bottom past the home indicator safe area */
+  bottom: calc(-1 * env(safe-area-inset-bottom, 34px));
+  /* Also extend height to cover the full physical screen */
+  min-height: 100dvh;
   overflow: hidden;
   margin: 0;
-  padding: 0;
 }
 
 #root {
