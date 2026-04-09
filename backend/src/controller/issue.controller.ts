@@ -10,6 +10,7 @@ import type {
   NearbyIssuesQuery,
 } from "../schema/issue.schema.js";
 import { uploadIssuePhoto, deleteIssuePhoto } from "../service/storage.service.js";
+import { XP_REWARDS } from "../util/xp.js";
 
 /**
  * @route   POST /api/issues
@@ -56,24 +57,32 @@ export const createIssue = asyncHandler(async (req, res) => {
       return null;
     }
 
+    const pointsEarned = photoUrl ? 15 : 10;
+    const xpEarned = photoUrl ? XP_REWARDS.REPORT_WITH_PHOTO : XP_REWARDS.REPORT_WITHOUT_PHOTO;
+
     // 2. Update the user's points
     const [updatedUser] = await tx
       .update(users)
-      .set({ 
-        points: sql`${users.points} + ${pointsEarned}` 
+      .set({
+        points: sql`${users.points} + ${pointsEarned}`,
+        experience: sql`${users.experience} + ${xpEarned}`,
       })
       .where(eq(users.id, user.userId))
-      .returning({ 
-        points: users.points 
+      .returning({
+        points: users.points,
+        experience: users.experience,
+        level: users.level,
       });
     
     if (!updatedUser) {
       tx.rollback(); 
       throw new AppError(404, "USER_NOT_FOUND", "Could not update points: User not found");
     }
-    return { 
-      newIssue, 
-      newTotalPoints: updatedUser.points 
+    return {
+      newIssue,
+      newTotalPoints: updatedUser.points,
+      newExperience: updatedUser.experience,
+      newLevel: updatedUser.level,
     };
   });
 
@@ -92,6 +101,8 @@ export const createIssue = asyncHandler(async (req, res) => {
         avatar_url: null,
       },
       newTotalPoints: result.newTotalPoints,
+      newExperience: result.newExperience,
+      newLevel: result.newLevel,
     },
   });
 });
@@ -177,22 +188,37 @@ export const updateIssueStatus = asyncHandler(async (req, res) => {
   const { id } = res.locals.params as { id: string };
   const body = res.locals.body as UpdateIssueStatusInput;
 
-  const [updated] = await db
-    .update(issues)
-    .set({ status: body.status })
-    .where(eq(issues.id, id))
-    .returning({
-      id: issues.id,
-      status: issues.status,
-    });
+  const result = await db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(issues)
+      .set({ status: body.status })
+      .where(eq(issues.id, id))
+      .returning({
+        id: issues.id,
+        status: issues.status,
+        userId: issues.userId,
+      });
 
-  if (!updated) {
-    throw new AppError(404, "NOT_FOUND", "Issue not found");
-  }
+    if (!updated) {
+      throw new AppError(404, "NOT_FOUND", "Issue not found");
+    }
+
+    // Only grant XP to the reporter when the issue is marked resolved
+    if (body.status === "resolved") {
+      await tx
+        .update(users)
+        .set({
+          experience: sql`${users.experience} + ${XP_REWARDS.ISSUE_RESOLVED}`,
+        })
+        .where(eq(users.id, updated.userId));
+    }
+
+    return { id: updated.id, status: updated.status };
+  });
 
   return res.status(200).json({
     status: "success",
-    data: { issue: updated },
+    data: { issue: result },
   });
 });
 

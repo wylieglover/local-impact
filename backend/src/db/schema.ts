@@ -47,6 +47,9 @@ export const users = pgTable(
     role: userRole("role").notNull().default("reporter"),
     points: integer("points").notNull().default(0),
     experience: integer("experience").notNull().default(0),
+    level: integer("level").generatedAlwaysAs(
+      sql`FLOOR(POWER(experience::numeric / 100, 1.0 / 1.5)) + 1`
+    ).notNull(),
     avatarUrl: text("avatar_url"),
     bio: text("bio"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

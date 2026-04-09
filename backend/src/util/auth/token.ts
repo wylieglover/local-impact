@@ -8,6 +8,8 @@ export type TokenPayload = {
   username: string;
   role: "reporter" | "moderator" | "admin";
   points: number;
+  experience: number;
+  level: number;
 };
 
 /**

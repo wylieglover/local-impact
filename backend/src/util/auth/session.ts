@@ -22,7 +22,9 @@ export const createSessionAndTokens = async (
     userId: tokenPayload.userId,
     username: tokenPayload.username,
     role: tokenPayload.role,
-    points: tokenPayload.points
+    points: tokenPayload.points,
+    experience: tokenPayload.experience,
+    level: tokenPayload.level
   }
 
   const accessToken = generateAccessToken(cleanPayload)

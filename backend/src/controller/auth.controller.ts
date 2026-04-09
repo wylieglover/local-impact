@@ -51,7 +51,9 @@ export const register = asyncHandler(async (req, res) => {
       id: users.id,
       username: users.username,
       role: users.role,
-      points: users.points
+      points: users.points,
+      experience: users.experience,
+      level: users.level
     });
 
   if (!newUser) {
@@ -63,7 +65,9 @@ export const register = asyncHandler(async (req, res) => {
       userId: newUser.id,
       username: newUser.username,
       role: newUser.role as "reporter" | "moderator" | "admin",
-      points: newUser.points
+      points: newUser.points,
+      experience: newUser.experience,
+      level: newUser.level ?? 0
     },
     req,
     res
@@ -114,7 +118,9 @@ export const login = asyncHandler(async (req, res) => {
       userId: user.id,
       username: user.username,
       role: user.role as "reporter" | "moderator" | "admin",
-      points: user.points
+      points: user.points,
+      experience: user.experience,
+      level: user.level
     },
     req,
     res
@@ -168,7 +174,9 @@ export const refresh = asyncHandler(async (req, res) => {
       username: true,
       role: true,
       email: true,
-      points: true
+      points: true,
+      experience: true,
+      level: true
     }
   });
 
