@@ -44,7 +44,7 @@ export const createSessionAndTokens = async (
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: env.NODE_ENV === "production" ? "none" : "lax",
     maxAge: env.JWT_REFRESH_EXPIRY * 1000,
     path: "/",
   })
