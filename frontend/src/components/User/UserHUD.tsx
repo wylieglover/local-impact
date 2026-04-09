@@ -20,7 +20,7 @@ export default function UserHUD() {
   }
 
   return (
-    <div className="absolute top-4 left-4 z-[100] flex flex-col gap-2">
+    <div className="absolute top-15 left-4 z-[100] flex flex-col gap-2">
       {/* 1. The Points Counter (The Trigger) */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
