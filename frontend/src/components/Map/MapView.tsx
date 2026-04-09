@@ -160,8 +160,8 @@ export default function MapView() {
         onClick={handleMapClick}
         attributionControl={false}
       >
-        <NavigationControl position="bottom-right" />
-        <AttributionControl position="top-right" compact />
+        <NavigationControl position="top-right" />
+        <AttributionControl position="bottom-right" compact />
         
         {/* Self marker */}
         <Marker latitude={userLocation.latitude} longitude={userLocation.longitude} anchor="center">

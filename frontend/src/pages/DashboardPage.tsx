@@ -1,5 +1,5 @@
 import MapView from "../components/Map/MapView"
-import { authApi } from "../api/auth.api"
+import { authApi } from "../api/auth.api" // Adjust path as needed
 import { useNavigate } from "react-router-dom"
 
 export default function DashboardPage() {
@@ -8,20 +8,22 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     try {
       await authApi.logout()
-      navigate("/login")
+      // Redirect to login or home after successful logout
+      navigate("/login") 
     } catch (error) {
       console.error("Logout failed:", error)
     }
   }
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
-      <div
-        style={{
-          position: "absolute",
-          top: "calc(var(--safe-top, env(safe-area-inset-top)) + 16px)",
-          right: "45px",
-          zIndex: 1000,
+    <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
+      {/* Logout Overlay */}
+      <div 
+        style={{ 
+          position: "absolute", 
+          top: "62px", 
+          right: "45px", 
+          zIndex: 1000
         }}
       >
         <button
@@ -33,8 +35,8 @@ export default function DashboardPage() {
             border: "none",
             borderRadius: "6px",
             cursor: "pointer",
-            fontWeight: 600,
-            boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+            fontWeight: "600",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
           }}
         >
           Logout
