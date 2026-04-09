@@ -14,6 +14,8 @@ type AuthResponse = {
       role: "reporter" | "moderator" | "admin"
       email?: string
       points?: number
+      experience?: number
+      level?: number
     }
     accessToken: string
   }
@@ -34,7 +36,9 @@ export const authApi = {
       userId: user.id,
       username: user.username,
       role: user.role,
-      points: user.points ?? 0 
+      points: user.points ?? 0,
+      experience: user.experience ?? 0,
+      level: user.level ?? 1
     })
     
     return res.data.data
@@ -48,7 +52,9 @@ export const authApi = {
       userId: user.id,
       username: user.username,
       role: user.role,
-      points: user.points ?? 0
+      points: user.points ?? 0,
+      experience: user.experience ?? 0,
+      level: user.level ?? 1
     })
     
     return res.data.data

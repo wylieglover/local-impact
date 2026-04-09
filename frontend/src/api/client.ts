@@ -67,6 +67,8 @@ apiClient.interceptors.response.use(
         username: refreshedUser.username,
         role: refreshedUser.role,
         points: refreshedUser.points ?? 0,
+        experience: refreshedUser.experience ?? 0,
+        level: refreshedUser.level ?? 1
       })
       processQueue(null, newToken)
 

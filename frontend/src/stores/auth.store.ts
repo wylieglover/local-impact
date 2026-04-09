@@ -8,6 +8,8 @@ type AuthUser = {
   username: string
   role: UserRole
   points: number
+  experience: number,
+  level: number
 }
 
 type AuthStore = {

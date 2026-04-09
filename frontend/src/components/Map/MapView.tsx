@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import MapGL, {
   Marker,
-  NavigationControl,
   AttributionControl,
   type MapRef,
 } from 'react-map-gl/mapbox'
@@ -13,6 +12,7 @@ import type { PointFeature } from 'supercluster'
 import IssueForm from '../Issues/IssueForm'
 import IssueDetail from '../Issues/IssueDetail'
 import UserHUD from '../User/UserHUD'
+import XPBar from '../UI/XPBar'
 import PlayerMarker from './PlayerMarker'
 import OtherPlayerMarker from './OtherPlayerMarker'
 import IssueMarker from './IssueMarker'
@@ -109,14 +109,19 @@ export default function MapView() {
 
   const handleFormSubmit = useCallback(async (description: string, photo: File | null) => {
     if (!pendingPin || !user) return
-    const { issue, newTotalPoints } = await issuesApi.create({
+    const { issue, newTotalPoints, newExperience, newLevel } = await issuesApi.create({
       description,
       latitude: pendingPin.latitude,
       longitude: pendingPin.longitude,
       photo: photo ?? undefined,
     })
     addIssue(issue)
-    setAuth(useAuthStore.getState().accessToken!, { ...user, points: newTotalPoints })
+    setAuth(useAuthStore.getState().accessToken!, {
+      ...user,
+      points: newTotalPoints,
+      experience: newExperience,
+      level: newLevel,
+    })
     setPendingPin(null)
   }, [pendingPin, user, addIssue, setAuth])
 
@@ -170,7 +175,6 @@ export default function MapView() {
         onClick={handleMapClick}
         attributionControl={false}
       >
-        <NavigationControl position="top-right" />
         <AttributionControl position="bottom-right" compact />
         
         {/* Self marker */}
@@ -255,6 +259,7 @@ export default function MapView() {
           }}
         />
       )}
+      <XPBar />
     </div>
   )
 }

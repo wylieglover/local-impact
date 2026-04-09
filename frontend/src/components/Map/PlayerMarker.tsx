@@ -60,7 +60,7 @@ export default function PlayerMarker({ facing }: Props) {
 
       <div className="absolute top-8 whitespace-nowrap">
         <span className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.2em] bg-slate-900/80 px-2 py-0.5 rounded border border-emerald-500/20 backdrop-blur-sm">
-          Signal_Origin
+          You
         </span>
       </div>
     </div>

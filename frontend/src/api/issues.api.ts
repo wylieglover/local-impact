@@ -18,6 +18,8 @@ export type Issue = {
 type CreateIssueResponse = {
   issue: Issue
   newTotalPoints: number
+  newExperience: number
+  newLevel: number
 }
 
 // Raw shape returned by the backend before mapping
@@ -72,6 +74,8 @@ export const issuesApi = {
     return {
       issue: mapRawIssue(res.data.data.issue),
       newTotalPoints: res.data.data.newTotalPoints,
+      newExperience: res.data.data.newExperience,
+      newLevel: res.data.data.newLevel, 
     }
   },
 

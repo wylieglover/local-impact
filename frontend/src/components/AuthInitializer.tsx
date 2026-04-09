@@ -6,25 +6,17 @@ type Props = {
   children: React.ReactNode
 }
 
-export default function AuthInitializer({ children }: Props) {
-  const [ready, setReady] = useState(false)
-  const user = useAuthStore((state) => state.user)
-  const accessToken = useAuthStore((state) => state.accessToken)
-  const setAuth = useAuthStore((state) => state.setAuth)
-  const clearAuth = useAuthStore((state) => state.clearAuth)
-  const hasRun = useRef(false)
+  export default function AuthInitializer({ children }: Props) {
+    const [ready, setReady] = useState(false)
+    const setAuth = useAuthStore((state) => state.setAuth)
+    const clearAuth = useAuthStore((state) => state.clearAuth)
+    const hasRun = useRef(false)
 
-  useEffect(() => {
-    if (hasRun.current) return
-    hasRun.current = true
+    useEffect(() => {
+      if (hasRun.current) return
+      hasRun.current = true
 
-    const initialize = async () => {
-      if (!user) {
-        setReady(true)
-        return
-      }
-
-      if (!accessToken) {
+      const initialize = async () => {
         try {
           const { data } = await plainClient.post("/auth/refresh")
           const newToken = data.data.accessToken
@@ -35,17 +27,19 @@ export default function AuthInitializer({ children }: Props) {
             username: refreshedUser.username,
             role: refreshedUser.role,
             points: refreshedUser.points ?? 0,
+            experience: refreshedUser.experience ?? 0,
+            level: refreshedUser.level ?? 1,
           })
         } catch {
+          // Refresh failed — no valid session, clear anything stale
           clearAuth()
+        } finally {
+          setReady(true)
         }
       }
 
-      setReady(true)
-    }
-
-    initialize()
-  }, [])
+      initialize()
+    }, [])
 
   if (!ready) {
     return (
