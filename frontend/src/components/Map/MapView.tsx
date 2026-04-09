@@ -12,7 +12,8 @@ import Supercluster from 'supercluster'
 import type { PointFeature } from 'supercluster'
 import IssueForm from '../Issues/IssueForm'
 import IssueDetail from '../Issues/IssueDetail'
-import PointsCounter from '../UI/PointsCounter'
+import PointsCounter from '../Points/PointsCounter'
+import UserHUD from '../User/UserHUD'
 import PlayerMarker from './PlayerMarker'
 import OtherPlayerMarker from './OtherPlayerMarker'
 import IssueMarker from './IssueMarker'
@@ -20,6 +21,7 @@ import IssueClusterMarker from './IssueClusterMarker'
 import MapControls from './MapControls'
 
 import { useAuthStore } from '../../stores/auth.store'
+import { useThemeStore } from '../../stores/theme.store'
 import { useDeviceFacing } from '../../hooks/useDeviceFacing'
 import { useIssues } from '../../hooks/useIssues'
 import { useNearbyIssues } from '../../hooks/useNearbyIssues'
@@ -46,8 +48,14 @@ export default function MapView() {
 
   const user = useAuthStore((state) => state.user)
   const setAuth = useAuthStore((state) => state.setAuth)
+  const mode = useThemeStore((state) => state.mode)
+
   const { issues, addIssue, mergeIssues, removeIssue } = useIssues()
   const { facing, requestPermission, permissionState } = useDeviceFacing()
+
+  const mapStyle = mode === 'dark' 
+    ? "mapbox://styles/mapbox/navigation-night-v1" 
+    : "mapbox://styles/mapbox/standard"
 
   const { loading: loadingNearby, error: nearbyError, refresh } = useNearbyIssues(
     userLocation,
@@ -133,7 +141,7 @@ export default function MapView() {
 
   return (
     <div className="relative w-full h-full">
-      <PointsCounter />
+      <UserHUD />
       <MapControls loading={loadingNearby} error={nearbyError} onRetry={refresh} />
       
       {/* iOS compass permission prompt — only appears when needed */}
@@ -153,8 +161,11 @@ export default function MapView() {
           latitude: userLocation.latitude,
           longitude: userLocation.longitude,
           zoom: 15,
+          pitch: 50,
         }}
-        mapStyle="mapbox://styles/mapbox/streets-v12"
+        mapStyle={mapStyle}
+        styleDiffing={false}
+        terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
         onMove={onMove}
         onLoad={onMove}
         onClick={handleMapClick}
