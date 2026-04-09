@@ -1,26 +1,25 @@
 @import "tailwindcss";
 
-html,
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
+  position: fixed;
+  /* Pull body up behind the Dynamic Island by exactly its height */
+  top: calc(-1 * var(--safe-top, env(safe-area-inset-top)));
+  left: 0;
+  right: 0;
+  /* Now height covers full physical screen: 894 + 62 = 956px */
+  height: var(--real-height, 100dvh);
+  overflow: hidden;
   margin: 0;
   padding: 0;
-  /* dvh = "dynamic viewport height" — accounts for browser chrome AND 
-     safe areas on iOS, unlike 100vh which is unreliable on mobile */
-  height: 100dvh;
+}
+
+#root {
   width: 100%;
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-
-html, body {
-  height: var(--real-height, 100dvh);
-}
-#root {
-  height: var(--real-height, 100dvh);
-}
-
-#root {
   height: 100%;
-  width: 100%;
   overflow: hidden;
 }
