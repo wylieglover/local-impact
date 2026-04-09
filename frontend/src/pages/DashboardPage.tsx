@@ -16,7 +16,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+    <div style={{ position: "fixed", inset: 0 }}>
       {/* Logout Overlay */}
       <div 
         style={{ 
