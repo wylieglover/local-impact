@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useAuthStore } from '../../stores/auth.store'
 import type { Issue } from '../../api/issues.api'
+import ImageModal from '../Image/ImageModal'
+import DescriptionModal from '../Image/DescriptionModal'
 
 type IssueDetailProps = {
   issue: Issue
@@ -48,6 +50,8 @@ function formatDate(dateStr: string) {
 export default function IssueDetail({ issue, onClose, onDelete }: IssueDetailProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDescModalOpen, setIsDescModalOpen] = useState(false)
 
   const user = useAuthStore((state) => state.user)
   const previewUrl = issue.photoUrl ?? null
@@ -77,23 +81,22 @@ export default function IssueDetail({ issue, onClose, onDelete }: IssueDetailPro
   }
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-slate-900 text-white rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-10 animate-in slide-in-from-bottom duration-300 border-t-4 border-slate-800">
+    <div className="absolute bottom-0 left-0 right-0 h-[500px] overflow-hidden bg-slate-900 text-white rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-10 animate-in slide-in-from-bottom duration-300 border-t-4 border-slate-800">
       {/* HUD Handle */}
       <div className="pt-4 pb-2 flex justify-center">
         <div className="w-14 h-1.5 bg-slate-700 rounded-full" />
       </div>
 
       {previewUrl && (
-        <div className="relative w-full overflow-hidden bg-slate-950 border-b-2 border-slate-800 group">
-          <div
-            className="absolute inset-0 opacity-30 blur-xl scale-110"
-            style={{ backgroundImage: `url(${previewUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-          />
-          <div className="relative flex justify-center items-center min-h-[300px] max-h-[70vh]">
+        <div 
+          onClick={() => setIsModalOpen(true)}
+          className="relative w-full h-[200px] overflow-hidden bg-slate-950 border-b-2 border-slate-800 group cursor-zoom-in"
+        >
+          <div className="relative flex justify-center items-center h-full">
             <img
               src={previewUrl}
               alt="Intel preview"
-              className="relative z-10 w-full h-full object-contain max-h-[500px]"
+              className="relative z-10 w-full h-full object-cover"
             />
             <div className="absolute inset-4 pointer-events-none z-20">
               <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-emerald-500/80" />
@@ -144,15 +147,26 @@ export default function IssueDetail({ issue, onClose, onDelete }: IssueDetailPro
         </div>
 
         {/* Intel Box */}
-        <div className="bg-slate-800/50 border-l-4 border-emerald-500 rounded-r-2xl p-4 mb-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-2 opacity-10">
+        <div 
+          onClick={() => setIsDescModalOpen(true)}
+          className="bg-slate-800/50 border-l-4 border-emerald-500 rounded-r-2xl p-4 mb-4 relative overflow-hidden max-h-[90px] cursor-pointer hover:bg-slate-800 transition-colors group"
+        >
+          <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
             <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
             </svg>
           </div>
-          <p className="text-[16px] text-slate-200 leading-relaxed font-medium">
+          
+          <p className="text-[14px] text-slate-200 leading-tight font-medium line-clamp-3">
             {issue.description}
           </p>
+
+          {/* Fade out the bottom of the text and hint that it's clickable */}
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-slate-800 to-transparent flex items-end justify-center pb-1">
+            <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+              Tap to expand
+            </span>
+          </div>
         </div>
 
         {/* Status + Reward */}
@@ -218,6 +232,20 @@ export default function IssueDetail({ issue, onClose, onDelete }: IssueDetailPro
           </div>
         </div>
       </div>
+      
+      <ImageModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        imageUrl={previewUrl}
+        title={`Anomaly #${issue.id.slice(-4)}`}
+      />
+
+      <DescriptionModal 
+        isOpen={isDescModalOpen}
+        onClose={() => setIsDescModalOpen(false)}
+        description={issue.description}
+        title={`Intel Report #${issue.id.slice(-4)}`}
+      />
 
       <style>{`
         @keyframes scan {
