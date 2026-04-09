@@ -16,7 +16,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0 }}>
+    <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
       {/* Logout Overlay */}
       <div 
         style={{ 
@@ -41,6 +41,23 @@ export default function DashboardPage() {
         >
           Logout
         </button>
+      </div>
+      
+      <div style={{
+        position: "fixed",
+        bottom: 100,
+        left: 10,
+        zIndex: 9999,
+        background: "rgba(0,0,0,0.85)",
+        color: "white",
+        padding: "8px",
+        fontSize: "11px",
+        borderRadius: "8px",
+        fontFamily: "monospace"
+      }}>
+        <div>innerHeight: {window.innerHeight}</div>
+        <div>innerWidth: {window.innerWidth}</div>
+        <div>safeTop: {CSS.supports("padding", "env(safe-area-inset-top)") ? "supported" : "no"}</div>
       </div>
 
       <MapView />

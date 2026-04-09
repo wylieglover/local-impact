@@ -1,21 +1,26 @@
 @import "tailwindcss";
 
-html {
-  height: 100%;
+html,
+body {
+  margin: 0;
+  padding: 0;
+  /* dvh = "dynamic viewport height" — accounts for browser chrome AND 
+     safe areas on iOS, unlike 100vh which is unreliable on mobile */
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
-body {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  /* Push past the home indicator safe area at the bottom */
-  bottom: calc(-1 * env(safe-area-inset-bottom));
-  overflow: hidden;
+html, body {
+  height: var(--real-height, 100dvh);
+}
+#root {
+  height: var(--real-height, 100dvh);
 }
 
 #root {
-  width: 100%;
   height: 100%;
+  width: 100%;
   overflow: hidden;
 }
