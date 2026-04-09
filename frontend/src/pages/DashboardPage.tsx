@@ -16,12 +16,12 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
       {/* Logout Overlay */}
       <div 
         style={{ 
           position: "absolute", 
-          top: "62px", 
+          top: "calc(env(safe-area-inset-top) + 16px)",
           right: "45px", 
           zIndex: 1000
         }}
