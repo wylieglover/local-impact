@@ -10,9 +10,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  /* Pull the bottom past the home indicator safe area */
   bottom: calc(-1 * env(safe-area-inset-bottom, 34px));
-  /* Also extend height to cover the full physical screen */
   min-height: 100dvh;
   overflow: hidden;
   margin: 0;
