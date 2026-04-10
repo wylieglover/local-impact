@@ -119,7 +119,13 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
     if (permissionState === 'granted') {
       hasReceivedEventRef.current = false
       attachListeners()
-      startValidationCheck()
+
+      // if nothing comes in shortly, treat as "not active"
+      setTimeout(() => {
+        if (!hasReceivedEventRef.current) {
+          setPermissionState('unknown')
+        }
+      }, 1500)
     }
 
     // Non-iOS auto-enable
