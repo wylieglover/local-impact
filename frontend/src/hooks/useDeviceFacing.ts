@@ -12,7 +12,10 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
   const [facing, setFacing] = useState<number | null>(null)
   const [permissionState, setPermissionState] = useState<
     'unknown' | 'granted' | 'denied' | 'unavailable'
-  >('unknown')
+  >(() => {
+    const saved = localStorage.getItem('compassPermission')
+    return (saved as any) || 'unknown'
+  })
 
   const handleOrientation = (e: DeviceOrientationEvent) => {
     // iOS: webkitCompassHeading is true north, 0–360
@@ -41,9 +44,11 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
         const state = await DeviceOrientationEventTyped.requestPermission()
         if (state === 'granted') {
           setPermissionState('granted')
+          localStorage.setItem('compassPermission', 'granted')
           attachListeners()
         } else {
           setPermissionState('denied')
+          localStorage.setItem('compassPermission', 'denied')
         }
       } catch {
         setPermissionState('denied')
@@ -51,6 +56,7 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
     } else {
       // Non-iOS: no permission needed, just attach
       setPermissionState('granted')
+      localStorage.setItem('compassPermission', 'granted')
       attachListeners()
     }
   }
@@ -65,19 +71,24 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
       return
     }
 
-    // Android / desktop — attach immediately, no permission gate
+    // If already granted (from cache), attach immediately
+    if (permissionState === 'granted') {
+      attachListeners()
+      return
+    }
+
+    // Android / desktop — no permission gate
     if (!needsPermission) {
       setPermissionState('granted')
+      localStorage.setItem('compassPermission', 'granted')
       attachListeners()
     }
-    // iOS — leave as 'unknown', caller must invoke requestPermission()
-    // from a user gesture
 
     return () => {
       window.removeEventListener('deviceorientationabsolute', handleOrientation as EventListener, true)
       window.removeEventListener('deviceorientation', handleOrientation as EventListener, true)
     }
-  }, [])
+  }, [permissionState])
 
   return { facing, requestPermission, permissionState }
 }

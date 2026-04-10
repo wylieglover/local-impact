@@ -123,7 +123,7 @@ export default function DashboardPage() {
       <MapControls loading={loadingNearby} error={nearbyError} onRetry={refresh} />
       <XPBar />
 
-      {permissionState === 'unknown' && (
+      {permissionState !== 'granted' && permissionState !== 'unavailable' && (
         <button
           onClick={requestPermission}
           className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-slate-900/90 border border-emerald-500/30 text-emerald-400 text-[10px] font-black tracking-widest uppercase px-4 py-2 rounded-xl backdrop-blur-sm"
