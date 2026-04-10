@@ -1,15 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 type UseDeviceFacingReturn = {
   facing: number | null
-  // On iOS the permission must be requested via a user gesture.
-  // Call this from a button's onClick handler.
   requestPermission: () => Promise<void>
   permissionState: 'unknown' | 'granted' | 'denied' | 'unavailable'
 }
 
 export function useDeviceFacing(): UseDeviceFacingReturn {
   const [facing, setFacing] = useState<number | null>(null)
+
   const [permissionState, setPermissionState] = useState<
     'unknown' | 'granted' | 'denied' | 'unavailable'
   >(() => {
@@ -17,23 +16,47 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
     return (saved as any) || 'unknown'
   })
 
+  const hasReceivedEventRef = useRef(false)
+  const timeoutRef = useRef<number | null>(null)
+
   const handleOrientation = (e: DeviceOrientationEvent) => {
-    // iOS: webkitCompassHeading is true north, 0–360
+    hasReceivedEventRef.current = true
+
     const ios = (e as any).webkitCompassHeading
     if (ios != null) {
       setFacing(ios)
       return
     }
-    // Android: alpha is CCW from north, invert to get compass bearing
+
     if (e.alpha != null) {
       setFacing((360 - e.alpha) % 360)
     }
   }
 
   const attachListeners = () => {
-    // Prefer absolute (true north) over relative
-    window.addEventListener('deviceorientationabsolute', handleOrientation as EventListener, true)
-    window.addEventListener('deviceorientation', handleOrientation as EventListener, true)
+    window.addEventListener(
+      'deviceorientationabsolute',
+      handleOrientation as EventListener,
+      true
+    )
+    window.addEventListener(
+      'deviceorientation',
+      handleOrientation as EventListener,
+      true
+    )
+  }
+
+  const detachListeners = () => {
+    window.removeEventListener(
+      'deviceorientationabsolute',
+      handleOrientation as EventListener,
+      true
+    )
+    window.removeEventListener(
+      'deviceorientation',
+      handleOrientation as EventListener,
+      true
+    )
   }
 
   const requestPermission = async () => {
@@ -42,23 +65,44 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
     if (typeof DeviceOrientationEventTyped.requestPermission === 'function') {
       try {
         const state = await DeviceOrientationEventTyped.requestPermission()
+
         if (state === 'granted') {
           setPermissionState('granted')
           localStorage.setItem('compassPermission', 'granted')
+
+          hasReceivedEventRef.current = false
           attachListeners()
+          startValidationCheck()
         } else {
           setPermissionState('denied')
           localStorage.setItem('compassPermission', 'denied')
         }
       } catch {
         setPermissionState('denied')
+        localStorage.setItem('compassPermission', 'denied')
       }
     } else {
-      // Non-iOS: no permission needed, just attach
+      // Android / desktop
       setPermissionState('granted')
       localStorage.setItem('compassPermission', 'granted')
+
+      hasReceivedEventRef.current = false
       attachListeners()
+      startValidationCheck()
     }
+  }
+
+  const startValidationCheck = () => {
+    if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
+
+    timeoutRef.current = window.setTimeout(() => {
+      // If we "think" we're granted but no events fired → it's broken (common iOS PWA issue)
+      if (permissionState === 'granted' && !hasReceivedEventRef.current) {
+        setPermissionState('unknown')
+        localStorage.removeItem('compassPermission')
+        detachListeners()
+      }
+    }, 1500)
   }
 
   useEffect(() => {
@@ -71,22 +115,25 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
       return
     }
 
-    // If already granted (from cache), attach immediately
+    // If we THINK we are granted, try activating
     if (permissionState === 'granted') {
+      hasReceivedEventRef.current = false
       attachListeners()
-      return
+      startValidationCheck()
     }
 
-    // Android / desktop — no permission gate
-    if (!needsPermission) {
+    // Non-iOS auto-enable
+    if (!needsPermission && permissionState !== 'granted') {
       setPermissionState('granted')
       localStorage.setItem('compassPermission', 'granted')
+
+      hasReceivedEventRef.current = false
       attachListeners()
     }
 
     return () => {
-      window.removeEventListener('deviceorientationabsolute', handleOrientation as EventListener, true)
-      window.removeEventListener('deviceorientation', handleOrientation as EventListener, true)
+      detachListeners()
+      if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
     }
   }, [permissionState])
 
