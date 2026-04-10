@@ -10,6 +10,21 @@ export type Player = {
   distance_meters: number
 }
 
+export type UserProfile = {
+  id: string
+  username: string
+  avatarUrl: string | null
+  bio: string | null
+  level: number
+  points: number
+  role: "reporter" | "moderator" | "admin"
+  createdAt: string
+}
+
+export type OwnProfile = UserProfile & {
+  experience: number
+}
+
 type RawPlayer = {
   id: string
   username: string
@@ -17,7 +32,7 @@ type RawPlayer = {
   role: "reporter" | "moderator" | "admin"
   location: {
     type: "Point"
-    coordinates: [number, number] // [longitude, latitude]
+    coordinates: [number, number]
   }
   distance_meters: number
 }
@@ -49,5 +64,28 @@ export const usersApi = {
       { params }
     )
     return res.data.data.players.map(mapRawPlayer)
+  },
+
+  getMe: async (): Promise<OwnProfile> => {
+    const res = await apiClient.get<{ data: { user: OwnProfile } }>("/users/me")
+    return res.data.data.user
+  },
+
+  updateMe: async (data: { bio?: string; avatar?: File }): Promise<OwnProfile> => {
+    const formData = new FormData()
+    if (data.bio !== undefined) formData.append("bio", data.bio)
+    if (data.avatar) formData.append("avatar", data.avatar)
+
+    const res = await apiClient.patch<{ data: { user: OwnProfile } }>(
+      "/users/me",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    )
+    return res.data.data.user
+  },
+
+  getUserById: async (userId: string): Promise<UserProfile> => {
+    const res = await apiClient.get<{ data: { user: UserProfile } }>(`/users/${userId}`)
+    return res.data.data.user
   },
 }

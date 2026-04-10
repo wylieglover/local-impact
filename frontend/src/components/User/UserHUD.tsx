@@ -4,7 +4,11 @@ import { useAuthStore } from '../../stores/auth.store'
 import { authApi } from '../../api/auth.api'
 import { useThemeStore } from '../../stores/theme.store'
 
-export default function UserHUD() {
+type Props = {
+  onOpenProfile: () => void
+}
+
+export default function UserHUD({ onOpenProfile }: Props) {
   const { mode, toggleTheme } = useThemeStore()
   const [isOpen, setIsOpen] = useState(false)
   const navigate = useNavigate()
@@ -64,6 +68,21 @@ export default function UserHUD() {
       {isOpen && (
         <div className="flex flex-col gap-1 w-full min-w-[140px] animate-in slide-in-from-top-2 fade-in duration-200">
           
+          { /* 0. The Profile Button } */}
+          <button
+            onClick={() => { onOpenProfile(); setIsOpen(false) }}
+            className="group flex items-center gap-3 bg-slate-900/90 backdrop-blur-md border border-slate-700 border-l-2 border-l-emerald-500 p-3 rounded-xl hover:bg-emerald-500/10 transition-all text-left"
+          >
+            <div className="p-1.5 bg-slate-800 rounded-lg border border-slate-700 group-hover:border-emerald-500/50">
+              <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest group-hover:text-white">
+              Profile
+            </span>
+          </button>
+
           <button 
             onClick={toggleTheme}
             className="group flex items-center justify-between bg-slate-900/90 backdrop-blur-md border border-slate-700 border-l-2 border-l-blue-400 p-3 rounded-xl hover:bg-blue-400/10 transition-all"

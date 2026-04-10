@@ -4,21 +4,20 @@ type Props = {
 
 export default function OtherPlayerMarker({ username }: Props) {
   return (
-    <div className="relative flex items-center justify-center">
+    <div
+      className="relative flex items-center justify-center cursor-pointer"
+      onClick={(e) => { e.stopPropagation(); }}
+    >
       {/* 1. Soft Presence Ring */}
       <div className="absolute w-10 h-10 rounded-full border border-sky-400/20 bg-sky-400/5" />
 
-      {/* 2. Outer Rotating Ring — slower, subtler than self */}
+      {/* 2. Outer Rotating Ring */}
       <div className="absolute w-8 h-8 border border-dashed border-sky-400/30 rounded-full animate-[spin_14s_linear_infinite]" />
 
       {/* 3. The Unit Core */}
       <div className="relative z-10 w-6 h-6 flex items-center justify-center">
-        {/* Glow */}
         <div className="absolute inset-0 bg-sky-500 blur-md opacity-30 animate-pulse" />
-
-        {/* Rotated square — same language as PlayerMarker but sky blue */}
         <div className="relative w-full h-full bg-slate-900 border-2 border-sky-400 rounded-md rotate-45 flex items-center justify-center shadow-[0_0_10px_rgba(56,189,248,0.4)]">
-          {/* Inner dot */}
           <div className="w-1.5 h-1.5 rounded-full bg-sky-400 -rotate-45" />
         </div>
       </div>

@@ -62,11 +62,11 @@ export default function IssueForm({ onClose, onSubmit }: IssueFormProps) {
   const isUnderMin = charCount > 0 && charCount < MIN_CHARS
   const isNearMax = charCount > MAX_CHARS * 0.9
   
-  // Gamification: Calculate dynamic XP based on user input
   const currentPoints = BASE_POINTS + (photo ? PHOTO_BONUS_POINTS : 0)
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-slate-900 text-white rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(16,185,129,0.15)] p-6 z-10 animate-in slide-in-from-bottom duration-300 border-t-4 border-emerald-500">
+    // ADDED: pb-20 (or pb-24) to push internal content above the level bar
+    <div className="absolute bottom-0 left-0 right-0 bg-slate-900 text-white rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(16,185,129,0.15)] p-6 pb-24 z-10 animate-in slide-in-from-bottom duration-300 border-t-4 border-emerald-500">
       <div className="w-14 h-1.5 bg-slate-700 rounded-full mx-auto mb-6" />
 
       <div className="flex items-center justify-between mb-6">
@@ -115,7 +115,6 @@ export default function IssueForm({ onClose, onSubmit }: IssueFormProps) {
           </div>
         </div>
 
-        {/* Photo Section - Scanner Style */}
         <div className="relative">
           <input
             ref={fileInputRef}

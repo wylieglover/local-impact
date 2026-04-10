@@ -58,9 +58,6 @@ export default function IssueDetail({ issue, onClose, onDelete }: IssueDetailPro
   const status = STATUS_CONFIG[issue.status] ?? STATUS_CONFIG.open
   const rewardPoints = previewUrl ? 15 : 10
 
-  // Moderators and admins can delete any issue.
-  // Reporters can only delete their own.
-  // TODO: once Issue type exposes userId, compare by userId instead of username
   const canDelete =
     user?.role === 'admin' ||
     user?.role === 'moderator' ||
@@ -81,9 +78,11 @@ export default function IssueDetail({ issue, onClose, onDelete }: IssueDetailPro
   }
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 h-[500px] overflow-hidden bg-slate-900 text-white rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-10 animate-in slide-in-from-bottom duration-300 border-t-4 border-slate-800">
+    // FIX: Added overflow-y-auto so content is scrollable if it exceeds the 500px height
+    <div className="absolute bottom-0 left-0 right-0 h-[500px] overflow-y-auto bg-slate-900 text-white rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-10 animate-in slide-in-from-bottom duration-300 border-t-4 border-slate-800">
+      
       {/* HUD Handle */}
-      <div className="pt-4 pb-2 flex justify-center">
+      <div className="pt-4 pb-2 flex justify-center sticky top-0 bg-slate-900 z-50">
         <div className="w-14 h-1.5 bg-slate-700 rounded-full" />
       </div>
 
@@ -113,7 +112,7 @@ export default function IssueDetail({ issue, onClose, onDelete }: IssueDetailPro
           </div>
           <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 via-transparent to-slate-900 z-10" />
           <button
-            onClick={onClose}
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
             className="absolute top-4 right-4 p-2 bg-slate-900/80 backdrop-blur-md rounded-xl text-white border border-slate-700 hover:bg-red-500 transition-all z-40"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -123,7 +122,8 @@ export default function IssueDetail({ issue, onClose, onDelete }: IssueDetailPro
         </div>
       )}
 
-      <div className="p-6">
+      {/* FIX: pb-24 lifts the footer and delete buttons above the Level Bar */}
+      <div className="p-6 pb-24">
         <div className="flex items-start justify-between mb-6">
           <div>
             <span className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
@@ -161,7 +161,6 @@ export default function IssueDetail({ issue, onClose, onDelete }: IssueDetailPro
             {issue.description}
           </p>
 
-          {/* Fade out the bottom of the text and hint that it's clickable */}
           <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-slate-800 to-transparent flex items-end justify-center pb-1">
             <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
               Tap to expand
@@ -189,7 +188,6 @@ export default function IssueDetail({ issue, onClose, onDelete }: IssueDetailPro
           </div>
         </div>
 
-        {/* Delete — only rendered if the user has permission */}
         {canDelete && (
           <div className="mt-4">
             <button
@@ -208,7 +206,6 @@ export default function IssueDetail({ issue, onClose, onDelete }: IssueDetailPro
                 : 'Purge Intel'}
             </button>
 
-            {/* Tap-away to cancel confirm state */}
             {confirmDelete && !isDeleting && (
               <button
                 onClick={() => setConfirmDelete(false)}
