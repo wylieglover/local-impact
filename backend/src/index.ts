@@ -10,6 +10,7 @@ import { authRoutes } from "./route/auth.route.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { issuesRoutes } from "./route/issue.route.js";
 import { userRoutes } from "./route/user.route.js";
+import { friendshipRoutes } from "./route/friendship.route.js";
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.get("/health", cors(), (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/issues", issuesRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/friends", friendshipRoutes);
 
 app.use(errorHandler);
 

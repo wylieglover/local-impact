@@ -1,37 +1,43 @@
+import FriendButton from '../User/FriendButton'
+import type { Friend, FriendRequest, SentRequest } from '../../api/friendship.api'
+
 type Props = {
   username: string
+  userId: string
   position: { x: number; y: number }
+  friends: Friend[]
+  friendRequests: FriendRequest[]
+  sentRequests: SentRequest[]
   onViewProfile: () => void
   onClose: () => void
 }
 
-export default function PlayerContextMenu({ username, position, onViewProfile, onClose }: Props) {
+export default function PlayerContextMenu({ username, userId, position, friends, friendRequests, sentRequests, onViewProfile, onClose }: Props) {
   return (
     <>
-      {/* Backdrop */}
       <div className="absolute inset-0 z-[150]" onClick={onClose} />
 
-      {/* Menu — positioned to the right of the tap point */}
       <div
         className="absolute z-[151] animate-in fade-in zoom-in-95 duration-150"
-        style={{
-          left: position.x + 30,
-          top: position.y,
-        }}
+        style={{ left: position.x + 30, top: position.y }}
       >
         <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-2xl overflow-hidden shadow-xl min-w-[180px]">
-          {/* Header */}
           <div className="px-4 py-3 border-b border-slate-800">
-            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
-              Operative
-            </p>
-            <p className="text-sm font-black text-sky-400 uppercase tracking-tight">
-              @{username}
-            </p>
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Operative</p>
+            <p className="text-sm font-black text-sky-400 uppercase tracking-tight">@{username}</p>
           </div>
 
-          {/* Actions */}
           <div className="p-1.5 flex flex-col gap-0.5">
+            <div className="px-1.5 pt-1 pb-0.5">
+              <FriendButton
+                userId={userId}
+                friends={friends}
+                friendRequests={friendRequests}
+                sentRequests={sentRequests}
+                onAction={onClose}
+              />
+            </div>
+
             <button
               onClick={onViewProfile}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-800 transition-all text-left group"

@@ -22,6 +22,10 @@ import type { Issue } from '../api/issues.api'
 import PlayerContextMenu from '../components/Map/PlayerContextMenu'
 import type { Player } from '../api/users.api'
 
+import FriendsPanel from '../components/User/FriendsPanel'
+import { useFriends } from '../hooks/useFriends'
+import { useFriendRequests } from '../hooks/useFriendRequests'
+
 export default function DashboardPage() {
   const { userLocation, locationError } = usePlayerLocation()
 
@@ -42,6 +46,10 @@ export default function DashboardPage() {
   const { facing, requestPermission, permissionState } = useDeviceFacing()
   const { loading: loadingNearby, error: nearbyError, refresh } = useNearbyIssues(userLocation, mergeIssues, { radius: 1609 })
   const { players } = useNearbyPlayers(userLocation, { radius: 1609 })
+  
+  const { friends } = useFriends()
+  const { requests: friendRequests, sentRequests } = useFriendRequests()
+  const [showFriends, setShowFriends] = useState(false)
 
   const mapStyle = mode === 'dark'
     ? 'mapbox://styles/mapbox/navigation-night-v1'
@@ -119,7 +127,10 @@ export default function DashboardPage() {
       />
 
       {/* UI overlays sit on top */}
-      <UserHUD onOpenProfile={() => { setProfileUserId(undefined); setShowProfile(true) }} />
+      <UserHUD
+        onOpenProfile={() => { setProfileUserId(undefined); setShowProfile(true) }}
+        onOpenFriends={() => setShowFriends(true)}
+      />
       <MapControls loading={loadingNearby} error={nearbyError} onRetry={refresh} />
       <XPBar />
 
@@ -151,7 +162,11 @@ export default function DashboardPage() {
       {contextPlayer && contextPosition && (
         <PlayerContextMenu
           username={contextPlayer.username}
+          userId={contextPlayer.id}
           position={contextPosition}
+          friends={friends}
+          friendRequests={friendRequests}
+          sentRequests={sentRequests}
           onClose={() => { setContextPlayer(null); setContextPosition(null) }}
           onViewProfile={() => {
             setProfileUserId(contextPlayer.id)
@@ -166,6 +181,20 @@ export default function DashboardPage() {
         <ProfilePanel
           userId={profileUserId}
           onClose={() => setShowProfile(false)}
+          friends={friends}
+          friendRequests={friendRequests}
+          sentRequests={sentRequests}
+        />
+      )}
+
+      {showFriends && (
+        <FriendsPanel
+          onClose={() => setShowFriends(false)}
+          onViewProfile={(userId) => {
+            setProfileUserId(userId)
+            setShowProfile(true)
+            setShowFriends(false)
+          }}
         />
       )}
     </div>

@@ -9,6 +9,7 @@ import {
   index,
   inet,
   customType,
+  unique
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -34,6 +35,7 @@ const geography = customType<{ data: GeoPoint }>({
 // Enums
 export const userRole = pgEnum("user_role", ["reporter", "moderator", "admin"]);
 export const issueStatus = pgEnum("issue_status", ["open", "in_progress", "resolved"]);
+export const friendshipStatus = pgEnum("friendship_status", ["pending", "accepted", "blocked"]);
 
 // Users
 export const users = pgTable(
@@ -59,6 +61,31 @@ export const users = pgTable(
       "email_or_phone_required",
       sql`${table.email} IS NOT NULL OR ${table.phone} IS NOT NULL`
     ),
+  ]
+);
+
+// Friendships
+export const friendships = pgTable(
+  "friendships",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    senderId: uuid("sender_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    receiverId: uuid("receiver_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: friendshipStatus("status").notNull().default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("no_self_friend", sql`${table.senderId} != ${table.receiverId}`),
+    index("idx_friendships_sender").on(table.senderId),
+    index("idx_friendships_receiver").on(table.receiverId),
+    index("idx_friendships_status").on(table.status),
+    // unique constraint so there's only ever one row per pair in one direction
+    unique("unique_friendship").on(table.senderId, table.receiverId),
   ]
 );
 

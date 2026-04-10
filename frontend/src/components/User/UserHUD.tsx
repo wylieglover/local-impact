@@ -6,14 +6,15 @@ import { useThemeStore } from '../../stores/theme.store'
 
 type Props = {
   onOpenProfile: () => void
+  onOpenFriends: () => void
 }
 
-export default function UserHUD({ onOpenProfile }: Props) {
+export default function UserHUD({ onOpenProfile, onOpenFriends }: Props) {
   const { mode, toggleTheme } = useThemeStore()
   const [isOpen, setIsOpen] = useState(false)
   const navigate = useNavigate()
   const points = useAuthStore((state) => state.user?.points ?? 0)
-
+  
   const handleLogout = async () => {
     try {
       await authApi.logout()
@@ -80,6 +81,20 @@ export default function UserHUD({ onOpenProfile }: Props) {
             </div>
             <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest group-hover:text-white">
               Profile
+            </span>
+          </button>
+
+          <button
+            onClick={() => { onOpenFriends(); setIsOpen(false) }}
+            className="group flex items-center gap-3 bg-slate-900/90 backdrop-blur-md border border-slate-700 border-l-2 border-l-sky-400 p-3 rounded-xl hover:bg-sky-400/10 transition-all text-left"
+          >
+            <div className="p-1.5 bg-slate-800 rounded-lg border border-slate-700 group-hover:border-sky-400/50">
+              <svg className="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest group-hover:text-white">
+              Allies
             </span>
           </button>
 

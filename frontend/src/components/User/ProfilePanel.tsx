@@ -3,6 +3,8 @@ import { useAuthStore } from "../../stores/auth.store"
 import { useProfile } from "../../hooks/useProfile"
 import { usersApi } from "../../api/users.api"
 import type { OwnProfile } from "../../api/users.api"
+import type { FriendRequest, Friend, SentRequest } from "../../api/friendship.api"
+import FriendButton from './FriendButton'
 
 const ROLE_CONFIG = {
   admin: { label: "ADMIN", color: "text-red-400", border: "border-red-500/30", bg: "bg-red-500/10" },
@@ -20,11 +22,13 @@ function formatJoinDate(dateStr: string) {
 type Props = {
   userId?: string
   onClose: () => void
+  friends: Friend[]
+  friendRequests: FriendRequest[]
+  sentRequests: SentRequest[]
 }
 
-export default function ProfilePanel({ userId, onClose }: Props) {
+export default function ProfilePanel({ userId, onClose, friends, friendRequests, sentRequests }: Props) {
   const currentUser = useAuthStore((state) => state.user)
-  const setAuth = useAuthStore((state) => state.setAuth)
   const [exiting, setExiting] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [bioInput, setBioInput] = useState("")
@@ -71,13 +75,7 @@ export default function ProfilePanel({ userId, onClose }: Props) {
         bio: bioInput,
         avatar: avatarFile ?? undefined,
       })
-      // Update the profile displayed in the panel
       setProfile(updated as OwnProfile)
-      // Sync avatarUrl back into the auth store so UserHUD reflects it
-      setAuth(useAuthStore.getState().accessToken!, {
-        ...currentUser,
-        // avatarUrl isn't in AuthUser yet but this is ready for when it is
-      })
       setIsEditing(false)
     } catch {
       setSaveError("Failed to save changes")
@@ -94,9 +92,7 @@ export default function ProfilePanel({ userId, onClose }: Props) {
     <div className={`absolute inset-0 z-[200] bg-slate-950 text-white transition-transform duration-250 ${panelClass} flex items-center justify-center`}>
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-slate-500 uppercase tracking-widest font-black">
-          Retrieving Intel...
-        </p>
+        <p className="text-sm text-slate-500 uppercase tracking-widest font-black">Retrieving Intel...</p>
       </div>
     </div>
   )
@@ -104,9 +100,7 @@ export default function ProfilePanel({ userId, onClose }: Props) {
   if (error || !profile) return (
     <div className={`absolute inset-0 z-[200] bg-slate-950 text-white transition-transform duration-250 ${panelClass} flex items-center justify-center`}>
       <div className="flex flex-col items-center gap-4 text-center px-6">
-        <p className="text-red-400 font-black uppercase tracking-widest text-sm">
-          Operative Not Found
-        </p>
+        <p className="text-red-400 font-black uppercase tracking-widest text-sm">Operative Not Found</p>
         <button onClick={handleClose} className="text-slate-500 text-xs uppercase tracking-widest font-black hover:text-white transition-colors">
           ← Return
         </button>
@@ -122,10 +116,7 @@ export default function ProfilePanel({ userId, onClose }: Props) {
       {/* Header */}
       <div className="px-6 pt-[env(safe-area-inset-top)]">
         <div className="mt-4 flex items-center justify-between">
-          <button
-            onClick={handleClose}
-            className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors"
-          >
+          <button onClick={handleClose} className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
             </svg>
@@ -133,27 +124,16 @@ export default function ProfilePanel({ userId, onClose }: Props) {
           </button>
 
           {isOwnProfile && !isEditing && (
-            <button
-              onClick={handleEditStart}
-              className="text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors"
-            >
+            <button onClick={handleEditStart} className="text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors">
               Edit
             </button>
           )}
-
           {isOwnProfile && isEditing && (
             <div className="flex items-center gap-4">
-              <button
-                onClick={handleEditCancel}
-                className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors"
-              >
+              <button onClick={handleEditCancel} className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors">
                 Cancel
               </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-50"
-              >
+              <button onClick={handleSave} disabled={saving} className="text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-50">
                 {saving ? "Saving..." : "Save"}
               </button>
             </div>
@@ -175,39 +155,39 @@ export default function ProfilePanel({ userId, onClose }: Props) {
                 </span>
               )}
             </div>
-
-            {/* Camera button overlay — only in edit mode */}
             {isEditing && (
               <>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute inset-0 rounded-2xl bg-slate-900/70 flex items-center justify-center transition-opacity"
+                  className="absolute inset-0 rounded-2xl bg-slate-900/70 flex items-center justify-center"
                 >
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                />
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
               </>
             )}
           </div>
 
           <div className="text-center">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">
-              Operative Identity
-            </p>
-            <h1 className="text-2xl font-black uppercase tracking-tight">
-              @{profile.username}
-            </h1>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Operative Identity</p>
+            <h1 className="text-2xl font-black uppercase tracking-tight">@{profile.username}</h1>
           </div>
         </div>
+
+        {/* Friend button — only on other users' profiles */}
+        {!isOwnProfile && (
+          <div className="mb-6">
+            <FriendButton
+              userId={userId!}
+              friends={friends}
+              friendRequests={friendRequests}
+              sentRequests={sentRequests}
+            />
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3 mb-6">
@@ -230,36 +210,33 @@ export default function ProfilePanel({ userId, onClose }: Props) {
         {/* Role badge */}
         <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border ${role.border} ${role.bg} mb-6`}>
           <div className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
-          <span className={`text-[10px] font-black tracking-widest uppercase ${role.color}`}>
-            {role.label}
-          </span>
+          <span className={`text-[10px] font-black tracking-widest uppercase ${role.color}`}>{role.label}</span>
         </div>
 
         {/* Bio */}
         <div className="bg-slate-900 border border-slate-800 border-l-2 border-l-slate-600 rounded-xl p-4 mb-6">
           <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Bio</p>
           {isEditing ? (
-            <textarea
-              value={bioInput}
-              onChange={(e) => setBioInput(e.target.value)}
-              maxLength={300}
-              rows={4}
-              placeholder="Write something about yourself..."
-              className="w-full bg-transparent text-sm text-slate-200 leading-relaxed font-medium resize-none outline-none placeholder:text-slate-600"
-            />
+            <>
+              <textarea
+                value={bioInput}
+                onChange={(e) => setBioInput(e.target.value)}
+                maxLength={300}
+                rows={4}
+                placeholder="Write something about yourself..."
+                className="w-full bg-transparent text-sm text-slate-200 leading-relaxed font-medium resize-none outline-none placeholder:text-slate-600"
+              />
+              <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest mt-2 text-right">
+                {bioInput.length}/300
+              </p>
+            </>
           ) : (
             <p className="text-sm text-slate-300 leading-relaxed font-medium">
               {profile.bio ?? "No bio yet."}
             </p>
           )}
-          {isEditing && (
-            <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest mt-2 text-right">
-              {bioInput.length}/300
-            </p>
-          )}
         </div>
 
-        {/* Save error */}
         {saveError && (
           <p className="text-red-400 text-[10px] font-black uppercase tracking-widest text-center mb-4">
             {saveError}

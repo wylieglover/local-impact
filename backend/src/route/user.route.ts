@@ -49,7 +49,7 @@ userRoutes.patch(
   updateMe
 );
 
-// ✅ Dynamic param route last — catches anything that didn't match above
+// Dynamic param route last — catches anything that didn't match above
 userRoutes.get(
   "/:userId",
   validate({ params: userIdParamSchema }),
@@ -57,4 +57,4 @@ userRoutes.get(
   getUserById
 );
 
-export { userRoutes }
+export { userRoutes };
