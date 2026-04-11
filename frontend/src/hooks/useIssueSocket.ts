@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { connectSocket, disconnectSocket } from "../lib/socket"
+import { connectSocket } from "../lib/socket"
 import type { Issue, IssueStatus } from "../api/issues.api"
 
 type Handlers = {

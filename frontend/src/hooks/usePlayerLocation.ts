@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react"
-import { getDistanceMeters } from '../utils/geo'
 
 const SMOOTHING = 0.3
 
