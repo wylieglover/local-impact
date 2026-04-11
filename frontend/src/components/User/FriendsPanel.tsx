@@ -1,7 +1,5 @@
 import { useState } from "react"
-import { useFriends } from "../../hooks/friendship/useFriends"
-import { useFriendRequests } from "../../hooks/friendship/useFriendRequests"
-import type { Friend } from "../../api/friendship.api"
+import type { Friend, FriendRequest } from "../../api/friendship.api"
 
 const PRESENCE_CONFIG = {
   online: { dot: "bg-emerald-400", label: "Online", text: "text-emerald-400" },
@@ -12,6 +10,12 @@ const PRESENCE_CONFIG = {
 type Props = {
   onClose: () => void
   onViewProfile: (userId: string) => void
+  friends: Friend[]
+  friendsLoading: boolean
+  requests: FriendRequest[]
+  requestsLoading: boolean
+  onAcceptRequest: (userId: string) => Promise<void>
+  onDeclineRequest: (userId: string) => Promise<void>
 }
 
 function FriendRow({ friend, onViewProfile }: { friend: Friend; onViewProfile: (id: string) => void }) {
@@ -22,7 +26,6 @@ function FriendRow({ friend, onViewProfile }: { friend: Friend; onViewProfile: (
       onClick={() => onViewProfile(friend.id)}
       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-800/50 transition-all rounded-xl group text-left"
     >
-      {/* Avatar */}
       <div className="relative flex-shrink-0">
         <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 overflow-hidden flex items-center justify-center">
           {friend.avatar_url ? (
@@ -33,11 +36,9 @@ function FriendRow({ friend, onViewProfile }: { friend: Friend; onViewProfile: (
             </span>
           )}
         </div>
-        {/* Presence dot */}
         <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900 ${presence.dot}`} />
       </div>
 
-      {/* Info */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-black text-white uppercase tracking-tight truncate group-hover:text-emerald-400 transition-colors">
           @{friend.username}
@@ -60,12 +61,18 @@ function FriendRow({ friend, onViewProfile }: { friend: Friend; onViewProfile: (
   )
 }
 
-export default function FriendsPanel({ onClose, onViewProfile }: Props) {
+export default function FriendsPanel({
+  onClose,
+  onViewProfile,
+  friends,
+  friendsLoading,
+  requests,
+  requestsLoading,
+  onAcceptRequest,
+  onDeclineRequest,
+}: Props) {
   const [exiting, setExiting] = useState(false)
   const [tab, setTab] = useState<"friends" | "requests">("friends")
-
-  const { friends, loading: friendsLoading } = useFriends()
-  const { requests, loading: requestsLoading, acceptRequest, declineRequest } = useFriendRequests()
 
   const handleClose = () => {
     setExiting(true)
@@ -82,7 +89,6 @@ export default function FriendsPanel({ onClose, onViewProfile }: Props) {
 
   return (
     <div className={`absolute inset-0 z-[200] bg-slate-950 text-white transition-transform duration-250 ${panelClass} flex flex-col`}>
-      {/* Header */}
       <div className="px-6 pt-[env(safe-area-inset-top)] flex-shrink-0">
         <div className="mt-4 flex items-center justify-between">
           <button onClick={handleClose} className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors">
@@ -97,7 +103,6 @@ export default function FriendsPanel({ onClose, onViewProfile }: Props) {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-2 mt-4 mb-2">
           <button
             onClick={() => setTab("friends")}
@@ -127,7 +132,6 @@ export default function FriendsPanel({ onClose, onViewProfile }: Props) {
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 pb-[env(safe-area-inset-bottom)]">
         {tab === "friends" && (
           <>
@@ -137,36 +141,26 @@ export default function FriendsPanel({ onClose, onViewProfile }: Props) {
               </div>
             ) : friends.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <p className="text-slate-600 font-black uppercase tracking-widest text-xs text-center">
-                  No allies yet
-                </p>
-                <p className="text-slate-700 text-[10px] text-center">
-                  Find operatives on the map and send them a request
-                </p>
+                <p className="text-slate-600 font-black uppercase tracking-widest text-xs text-center">No allies yet</p>
+                <p className="text-slate-700 text-[10px] text-center">Find operatives on the map and send them a request</p>
               </div>
             ) : (
               <div className="py-2">
                 {online.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-[9px] font-black text-emerald-500/60 uppercase tracking-widest px-4 mb-1">
-                      Online — {online.length}
-                    </p>
+                    <p className="text-[9px] font-black text-emerald-500/60 uppercase tracking-widest px-4 mb-1">Online — {online.length}</p>
                     {online.map((f) => <FriendRow key={f.id} friend={f} onViewProfile={onViewProfile} />)}
                   </div>
                 )}
                 {recentlySeen.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-[9px] font-black text-amber-500/60 uppercase tracking-widest px-4 mb-1">
-                      Recently Seen — {recentlySeen.length}
-                    </p>
+                    <p className="text-[9px] font-black text-amber-500/60 uppercase tracking-widest px-4 mb-1">Recently Seen — {recentlySeen.length}</p>
                     {recentlySeen.map((f) => <FriendRow key={f.id} friend={f} onViewProfile={onViewProfile} />)}
                   </div>
                 )}
                 {offline.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest px-4 mb-1">
-                      Offline — {offline.length}
-                    </p>
+                    <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest px-4 mb-1">Offline — {offline.length}</p>
                     {offline.map((f) => <FriendRow key={f.id} friend={f} onViewProfile={onViewProfile} />)}
                   </div>
                 )}
@@ -183,9 +177,7 @@ export default function FriendsPanel({ onClose, onViewProfile }: Props) {
               </div>
             ) : requests.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16">
-                <p className="text-slate-600 font-black uppercase tracking-widest text-xs text-center">
-                  No pending requests
-                </p>
+                <p className="text-slate-600 font-black uppercase tracking-widest text-xs text-center">No pending requests</p>
               </div>
             ) : (
               <div className="py-2 flex flex-col gap-2">
@@ -201,16 +193,12 @@ export default function FriendsPanel({ onClose, onViewProfile }: Props) {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-white uppercase tracking-tight truncate">
-                        @{req.username}
-                      </p>
-                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
-                        LVL {req.level}
-                      </p>
+                      <p className="text-sm font-black text-white uppercase tracking-tight truncate">@{req.username}</p>
+                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">LVL {req.level}</p>
                     </div>
                     <div className="flex gap-1.5 flex-shrink-0">
                       <button
-                        onClick={() => acceptRequest(req.sender_id)}
+                        onClick={() => onAcceptRequest(req.sender_id)}
                         className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 transition-all"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,7 +206,7 @@ export default function FriendsPanel({ onClose, onViewProfile }: Props) {
                         </svg>
                       </button>
                       <button
-                        onClick={() => declineRequest(req.sender_id)}
+                        onClick={() => onDeclineRequest(req.sender_id)}
                         className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-all"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

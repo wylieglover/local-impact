@@ -6,13 +6,18 @@ type Props = {
   friends: Friend[]
   friendRequests: FriendRequest[]
   sentRequests: SentRequest[]
-  onAction?: () => void
+  onAction?: () => void,
+  onSentRequest?: (req: SentRequest) => void
 }
 
-export default function FriendButton({ userId, friends, friendRequests, sentRequests, onAction }: Props) {
-  const { state, sendRequest, acceptRequest, removeFriend, error } = useFriendship(userId, friends, friendRequests, sentRequests)
+export default function FriendButton({ userId, friends, friendRequests, sentRequests, onAction, onSentRequest }: Props) {
+  const { state, sendRequest, acceptRequest, removeFriend, error } = useFriendship(
+    userId, friends, friendRequests, sentRequests, onSentRequest
+  )
 
-  const handleSend = async () => { await sendRequest(); onAction?.() }
+  const handleSend = async () => {
+    await sendRequest()
+  }
   const handleAccept = async () => { await acceptRequest(); onAction?.() }
   const handleRemove = async () => { await removeFriend(); onAction?.() }
 

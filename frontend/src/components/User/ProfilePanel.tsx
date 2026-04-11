@@ -25,9 +25,10 @@ type Props = {
   friends: Friend[]
   friendRequests: FriendRequest[]
   sentRequests: SentRequest[]
+  onSentRequest?: (req: SentRequest) => void
 }
 
-export default function ProfilePanel({ userId, onClose, friends, friendRequests, sentRequests }: Props) {
+export default function ProfilePanel({ userId, onClose, friends, friendRequests, sentRequests, onSentRequest }: Props) {
   const currentUser = useAuthStore((state) => state.user)
   const [exiting, setExiting] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -185,6 +186,7 @@ export default function ProfilePanel({ userId, onClose, friends, friendRequests,
               friends={friends}
               friendRequests={friendRequests}
               sentRequests={sentRequests}
+              onSentRequest={onSentRequest}
             />
           </div>
         )}

@@ -8,12 +8,13 @@ type Props = {
   friends: Friend[]
   friendRequests: FriendRequest[]
   sentRequests: SentRequest[]
+  onSentRequest?: (req: SentRequest) => void
   onViewProfile: () => void
   onClose: () => void
 }
 
-export default function PlayerContextMenu({ username, userId, position, friends, friendRequests, sentRequests, onViewProfile, onClose }: Props) {
-  return (
+export default function PlayerContextMenu({ username, userId, position, friends, friendRequests, sentRequests, onSentRequest, onViewProfile, onClose }: Props) {
+  return (  
     <>
       <div className="absolute inset-0 z-[150]" onClick={onClose} />
 
@@ -34,6 +35,7 @@ export default function PlayerContextMenu({ username, userId, position, friends,
                 friends={friends}
                 friendRequests={friendRequests}
                 sentRequests={sentRequests}
+                onSentRequest={onSentRequest}
                 onAction={onClose}
               />
             </div>

@@ -16,7 +16,8 @@ export function useFriendship(
   targetUserId: string,
   friends: Friend[],
   requests: FriendRequest[],
-  sentRequests: SentRequest[]
+  sentRequests: SentRequest[],
+  onSentRequest?: (req: SentRequest) => void
 ): UseFriendshipReturn {
   const [state, setState] = useState<FriendshipState>("loading")
   const [error, setError] = useState<string | null>(null)
@@ -40,12 +41,21 @@ export function useFriendship(
     setState("pending_sent")
     try {
       await friendshipApi.sendRequest(targetUserId)
+      // Optimistically add to sentRequests so state survives remounts
+      onSentRequest?.({
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        receiver_id: targetUserId,
+        username: "",
+        avatar_url: null,
+        level: 0,
+      })
       setError(null)
     } catch (err: any) {
       setError(err.response?.data?.message ?? "Failed to send request")
       setState("none")
     }
-  }, [targetUserId])
+  }, [targetUserId, onSentRequest])
 
   const acceptRequest = useCallback(async () => {
     try {

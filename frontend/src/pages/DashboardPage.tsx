@@ -48,8 +48,23 @@ export default function DashboardPage() {
   const { facing, requestPermission, permissionState } = useDeviceFacing()
   const { loading: loadingNearby, error: nearbyError, refresh } = useNearbyIssues(userLocation, mergeIssues, { radius: 1609 })
   const { players } = useNearbyPlayers(userLocation, { radius: 1609 })
-  const { friends, addFriend, removeFriend: removeFriendFromList } = useFriends()
-  const { requests: friendRequests, sentRequests, addRequest, removeSentRequest } = useFriendRequests()
+  const {
+    friends,
+    loading: friendsLoading,
+    addFriend,
+    removeFriend: removeFriendFromList,
+  } = useFriends()
+
+  const {
+    requests: friendRequests,
+    sentRequests,
+    loading: requestsLoading,
+    addRequest,
+    addSentRequest,
+    removeSentRequest,
+    acceptRequest,
+    declineRequest,
+  } = useFriendRequests()
 
   // Socket - real time friendship events
   useFriendSocket({
@@ -96,6 +111,23 @@ export default function DashboardPage() {
     setContextPlayer(player)
     setContextPosition(position)
   }, [])
+
+  const handleAcceptRequest = useCallback(async (userId: string) => {
+    await acceptRequest(userId)
+    // Find the request to build a provisional Friend entry
+    const req = friendRequests.find((r) => r.sender_id === userId)
+    if (req) {
+      addFriend({
+        id: req.sender_id,
+        username: req.username,
+        avatar_url: req.avatar_url,
+        level: req.level,
+        points: 0,
+        presence: "online",
+        last_seen: new Date().toISOString(),
+      })
+    }
+  }, [acceptRequest, friendRequests, addFriend])
 
   const handleFormSubmit = useCallback(async (description: string, photo: File | null) => {
     if (!pendingPin || !user) return
@@ -189,6 +221,7 @@ export default function DashboardPage() {
           position={contextPosition}
           friends={friends}
           friendRequests={friendRequests}
+          onSentRequest={addSentRequest}
           sentRequests={sentRequests}
           onClose={() => { setContextPlayer(null); setContextPosition(null) }}
           onViewProfile={() => {
@@ -207,6 +240,7 @@ export default function DashboardPage() {
           friends={friends}
           friendRequests={friendRequests}
           sentRequests={sentRequests}
+          onSentRequest={addSentRequest}
         />
       )}
 
@@ -218,6 +252,12 @@ export default function DashboardPage() {
             setShowProfile(true)
             setShowFriends(false)
           }}
+          friends={friends}
+          friendsLoading={friendsLoading}
+          requests={friendRequests}
+          requestsLoading={requestsLoading}
+          onAcceptRequest={handleAcceptRequest}
+          onDeclineRequest={declineRequest}
         />
       )}
     </div>
