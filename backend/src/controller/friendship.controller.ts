@@ -1,11 +1,11 @@
 import { asyncHandler } from "../util/asyncHandler.js"
 import { AppError } from "../middleware/error.middleware.js"
 import { db } from "../db/index.js"
-import { friendships, users, userLocations } from "../db/schema.js"
+import { friendships, users } from "../db/schema.js"
 import { eq, or, and, sql } from "drizzle-orm"
 import type { TokenPayload } from "../util/auth/token.js"
 import type { FriendUserIdParam } from "../schema/friendship.schema.js"
-import { getIO } from "../socket/index.js"
+import { getIO, getOnlineUserIds } from "../socket/index.js"
 import {
   broadcastFriendRequest,
   broadcastFriendRequestAccepted,
@@ -163,19 +163,15 @@ export const removeFriend = asyncHandler(async (req, res) => {
 
 export const getFriends = asyncHandler(async (req, res) => {
   const user = res.locals.user as TokenPayload
+  const onlineIds = getOnlineUserIds()
 
-  const friends = await db.execute(sql`
+  const rawFriends = await db.execute(sql`
     SELECT
       u.id,
       u.username,
       u.avatar_url,
       u.level,
       u.points,
-      CASE
-        WHEN ul.updated_at > now() - interval '2 minutes'  THEN 'online'
-        WHEN ul.updated_at > now() - interval '30 minutes' THEN 'recently_seen'
-        ELSE 'offline'
-      END AS presence,
       ul.updated_at AS last_seen
     FROM friendships f
     JOIN users u ON u.id = (
@@ -185,14 +181,22 @@ export const getFriends = asyncHandler(async (req, res) => {
     WHERE
       (f.sender_id = ${user.userId} OR f.receiver_id = ${user.userId})
       AND f.status = 'accepted'
-    ORDER BY
-      CASE
-        WHEN ul.updated_at > now() - interval '2 minutes'  THEN 0
-        WHEN ul.updated_at > now() - interval '30 minutes' THEN 1
-        ELSE 2
-      END,
-      u.username ASC
-  `)
+    ORDER BY u.username ASC
+  `) as any[]
+
+  const friends = rawFriends
+    .map((f) => ({
+      ...f,
+      presence: onlineIds.has(f.id)
+        ? "online"
+        : f.last_seen && new Date(f.last_seen) > new Date(Date.now() - 30 * 60 * 1000)
+          ? "recently_seen"
+          : "offline",
+    }))
+    .sort((a, b) => {
+      const order = { online: 0, recently_seen: 1, offline: 2 }
+      return order[a.presence as keyof typeof order] - order[b.presence as keyof typeof order]
+    })
 
   return res.status(200).json({
     status: "success",

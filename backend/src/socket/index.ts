@@ -14,10 +14,19 @@ export type AuthenticatedSocket = Socket & {
 }
 
 let io: SocketServer
+const connectedUsers = new Set<string>()
 
 export function getIO(): SocketServer {
   if (!io) throw new Error("Socket.io not initialized")
   return io
+}
+
+export function isUserOnline(userId: string): boolean {
+  return connectedUsers.has(userId)
+}
+
+export function getOnlineUserIds(): Set<string> {
+  return connectedUsers
 }
 
 export function initSocket(httpServer: HttpServer): SocketServer {
@@ -27,21 +36,17 @@ export function initSocket(httpServer: HttpServer): SocketServer {
       methods: ["GET", "POST"],
       credentials: true,
     },
-    // Ping every 25s, disconnect after 60s of no response
     pingInterval: 25000,
     pingTimeout: 60000,
   })
 
-  // Auth middleware — validates JWT on every connection
   io.use((socket, next) => {
     try {
       const token =
         socket.handshake.auth.token ||
         socket.handshake.headers.authorization?.split(" ")[1]
 
-      if (!token) {
-        return next(new Error("UNAUTHORIZED"))
-      }
+      if (!token) return next(new Error("UNAUTHORIZED"))
 
       const payload = verifyAccessToken(token)
       ;(socket as AuthenticatedSocket).data.user = payload
@@ -56,15 +61,16 @@ export function initSocket(httpServer: HttpServer): SocketServer {
     const authedSocket = socket as AuthenticatedSocket
     const { userId, username } = authedSocket.data.user
 
-    console.log(`[WS] Connected: ${username} (${userId})`)
+    connectedUsers.add(userId)
+    console.log(`[WS] Connected: ${username} (${userId}) — ${connectedUsers.size} online`)
 
-    // Register domain handlers
     registerLocationHandlers(io, authedSocket)
     registerIssuesHandlers(io, authedSocket)
     registerFriendsHandlers(io, authedSocket)
 
     socket.on("disconnect", (reason) => {
-      console.log(`[WS] Disconnected: ${username} — ${reason}`)
+      connectedUsers.delete(userId)
+      console.log(`[WS] Disconnected: ${username} — ${reason} — ${connectedUsers.size} online`)
     })
   })
 
