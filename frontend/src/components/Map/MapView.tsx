@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapGL, {
   Marker,
   AttributionControl,
@@ -16,11 +16,11 @@ import IssueClusterMarker from './IssueClusterMarker'
 
 import type { Issue } from '../../api/issues.api'
 import type { Player } from '../../api/users.api'
+import { useThemeStore } from '../../stores/theme.store'
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string
 
 type Props = {
-  mapStyle: string
   userLocation: { latitude: number; longitude: number }
   facing: number | null
   players: Player[]
@@ -34,7 +34,6 @@ type Props = {
 }
 
 export default function MapView({
-  mapStyle,
   userLocation,
   facing,
   players,
@@ -89,6 +88,20 @@ export default function MapView({
     return cluster.getClusters(bounds, Math.round(zoom))
   }, [cluster, bounds, zoom])
 
+  const mapStyle ='mapbox://styles/mapbox/standard'
+  const mode = useThemeStore((state) => state.mode)
+  
+  useEffect(() => {
+    const map = mapRef.current?.getMap()
+    if (!map) return
+
+    map.setConfigProperty(
+      'basemap',
+      'lightPreset',
+      mode === 'dark' ? 'night' : 'day'
+    )
+  }, [mode])
+
   return (
     <MapGL
       ref={mapRef}
@@ -103,7 +116,18 @@ export default function MapView({
       styleDiffing={false}
       terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
       onMove={onMove}
-      onLoad={onMove}
+      onLoad={() => {
+        const map = mapRef.current?.getMap()
+        if (!map) return
+
+        map.setConfigProperty(
+          'basemap',
+          'lightPreset',
+          mode === 'dark' ? 'night' : 'day'
+        )
+
+        onMove()
+      }}
       onClick={onMapClick}
       attributionControl={false}
       style={{ width: '100%', height: '100%' }}

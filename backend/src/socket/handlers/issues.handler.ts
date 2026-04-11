@@ -11,7 +11,8 @@ export function broadcastNewIssue(
   issue: {
     id: string
     description: string
-    photoUrl: string | null
+    beforePhotoUrl: string | null
+    afterPhotoUrl: string | null
     status: string
     createdAt: string
     latitude: number

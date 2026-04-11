@@ -6,10 +6,11 @@ import { eq, sql } from "drizzle-orm"
 import type { TokenPayload } from "../util/auth/token.js"
 import type {
   CreateIssueInput,
+  ClaimIssueInput,
   UpdateIssueStatusInput,
   NearbyIssuesQuery,
 } from "../schema/issue.schema.js"
-import { uploadIssuePhoto, deleteIssuePhoto } from "../service/storage.service.js"
+import { uploadIssueBeforePhoto, uploadAvatarPhoto, deleteIssuePhoto, uploadIssueAfterPhoto } from "../service/storage.service.js"
 import { XP_REWARDS } from "../util/xp.js"
 import { getIO } from "../socket/index.js"
 import {
@@ -17,23 +18,25 @@ import {
   broadcastIssueStatusUpdate,
   broadcastIssueDeleted,
 } from "../socket/handlers/issues.handler.js"
+import { getDistanceMeters } from "../util/geo.js"
 
 /**
  * @route   POST /api/issues
- * @desc    Creates a new issue at the given coordinates.
+ * @desc    Creates a new issue — before photo now required.
  * @access  Reporter, Moderator, Admin
  */
 export const createIssue = asyncHandler(async (req, res) => {
   const body = res.locals.body as CreateIssueInput
   const user = res.locals.user as TokenPayload
 
-  let photoUrl: string | null = null
-  if (req.file) {
-    photoUrl = await uploadIssuePhoto(req.file, user.userId)
+  // Before photo is required
+  if (!req.file) {
+    throw new AppError(400, "PHOTO_REQUIRED", "A before photo is required to report an issue")
   }
 
-  const pointsEarned = photoUrl ? 15 : 10
-  const xpEarned = photoUrl ? XP_REWARDS.REPORT_WITH_PHOTO : XP_REWARDS.REPORT_WITHOUT_PHOTO
+  const beforePhotoUrl = await uploadIssueBeforePhoto(req.file, user.userId)
+  const pointsEarned = 15 // Always 15 since photo is now required
+  const xpEarned = XP_REWARDS.REPORT_WITH_PHOTO
 
   const result = await db.transaction(async (tx) => {
     const [newIssue] = await tx
@@ -41,7 +44,7 @@ export const createIssue = asyncHandler(async (req, res) => {
       .values({
         userId: user.userId,
         description: body.description,
-        photoUrl,
+        beforePhotoUrl,
         location: {
           type: "Point",
           coordinates: [body.longitude, body.latitude],
@@ -50,16 +53,14 @@ export const createIssue = asyncHandler(async (req, res) => {
       .returning({
         id: issues.id,
         description: issues.description,
-        photoUrl: issues.photoUrl,
+        beforePhotoUrl: issues.beforePhotoUrl,
+        afterPhotoUrl: issues.afterPhotoUrl,
         status: issues.status,
         createdAt: issues.createdAt,
         location: sql`ST_AsGeoJSON(${issues.location})`.mapWith(JSON.parse),
       })
 
-    if (!newIssue) {
-      tx.rollback()
-      return null
-    }
+    if (!newIssue) { tx.rollback(); return null }
 
     const [updatedUser] = await tx
       .update(users)
@@ -76,28 +77,23 @@ export const createIssue = asyncHandler(async (req, res) => {
 
     if (!updatedUser) {
       tx.rollback()
-      throw new AppError(404, "USER_NOT_FOUND", "Could not update points: User not found")
+      throw new AppError(404, "USER_NOT_FOUND", "Could not update points")
     }
 
-    return {
-      newIssue,
-      newTotalPoints: updatedUser.points,
-      newExperience: updatedUser.experience,
-      newLevel: updatedUser.level,
-    }
+    return { newIssue, newTotalPoints: updatedUser.points, newExperience: updatedUser.experience, newLevel: updatedUser.level }
   })
 
   if (!result) {
-    if (photoUrl) await deleteIssuePhoto(photoUrl)
+    await deleteIssuePhoto(beforePhotoUrl)
     throw new AppError(500, "INSERT_FAILED", "Failed to create issue")
   }
 
-  // Broadcast to nearby clients via WebSocket — non-fatal if it fails
   try {
     broadcastNewIssue(getIO(), {
       id: result.newIssue.id,
       description: result.newIssue.description,
-      photoUrl: result.newIssue.photoUrl,
+      beforePhotoUrl: result.newIssue.beforePhotoUrl,
+      afterPhotoUrl: null,
       status: result.newIssue.status,
       createdAt: result.newIssue.createdAt.toISOString(),
       latitude: body.latitude,
@@ -123,6 +119,170 @@ export const createIssue = asyncHandler(async (req, res) => {
 })
 
 /**
+ * @route   POST /api/issues/:id/claim
+ * @desc    Claims an issue — user must be within 3 meters of the location.
+ * @access  Reporter, Moderator, Admin
+ */
+export const claimIssue = asyncHandler(async (req, res) => {
+  const { id } = res.locals.params as { id: string }
+  const body = res.locals.body as ClaimIssueInput
+  const user = res.locals.user as TokenPayload
+
+  const [existing] = await db.execute(sql`
+    SELECT
+      i.id,
+      i.user_id,
+      i.status,
+      i.claimed_by_user_id,
+      ST_Y(i.location::geometry) AS latitude,
+      ST_X(i.location::geometry) AS longitude
+    FROM issues i
+    WHERE i.id = ${id}
+  `) as any[]
+
+  if (!existing) {
+    throw new AppError(404, "NOT_FOUND", "Issue not found")
+  }
+
+  if (existing.status !== "open") {
+    throw new AppError(409, "ALREADY_CLAIMED", "This issue has already been claimed")
+  }
+
+  if (existing.user_id === user.userId) {
+    throw new AppError(403, "FORBIDDEN", "You cannot claim your own issue")
+  }
+
+  // GPS proximity check — must be within 3 meters
+  const distance = getDistanceMeters(
+    body.latitude, body.longitude,
+    existing.latitude, existing.longitude
+  )
+
+  if (distance > 3) {
+    throw new AppError(403, "TOO_FAR", `You must be within 3 meters of the issue to claim it. You are ${Math.round(distance)}m away.`)
+  }
+
+  const [updated] = await db
+    .update(issues)
+    .set({
+      status: "claimed",
+      claimedByUserId: user.userId,
+      claimedAt: sql`now()`,
+    })
+    .where(eq(issues.id, id))
+    .returning({ id: issues.id, status: issues.status })
+
+  if (!updated) {
+    throw new AppError(404, "NOT_FOUND", "Issue not found")
+  }
+
+  try {
+    broadcastIssueStatusUpdate(getIO(), updated.id, updated.status, existing.user_id, existing.latitude, existing.longitude)
+  } catch {}
+  return res.status(200).json({
+    status: "success",
+    data: { issue: updated },
+  })
+})
+
+/**
+ * @route   POST /api/issues/:id/resolve
+ * @desc    Submits after photo to resolve a claimed issue.
+ *          User must be within 3 meters and must be the claimer.
+ * @access  Reporter, Moderator, Admin
+ */
+export const resolveIssue = asyncHandler(async (req, res) => {
+  const { id } = res.locals.params as { id: string }
+  const user = res.locals.user as TokenPayload
+
+  // After photo is required
+  if (!req.file) {
+    throw new AppError(400, "PHOTO_REQUIRED", "An after photo is required to resolve an issue")
+  }
+
+  // Latitude/longitude come from form fields alongside the photo
+  const latitude = parseFloat(req.body.latitude)
+  const longitude = parseFloat(req.body.longitude)
+
+  if (isNaN(latitude) || isNaN(longitude)) {
+    throw new AppError(400, "LOCATION_REQUIRED", "Location is required to resolve an issue")
+  }
+
+  const [existing] = await db.execute(sql`
+    SELECT
+      i.id,
+      i.user_id,
+      i.claimed_by_user_id,
+      i.status,
+      ST_Y(i.location::geometry) AS latitude,
+      ST_X(i.location::geometry) AS longitude
+    FROM issues i
+    WHERE i.id = ${id}
+  `) as any[]
+
+  if (!existing) {
+    throw new AppError(404, "NOT_FOUND", "Issue not found")
+  }
+
+  if (existing.status !== "claimed" && existing.status !== "in_progress") {
+    throw new AppError(409, "INVALID_STATUS", "Issue must be claimed before it can be resolved")
+  }
+
+  // Only the claimer or a moderator/admin can resolve
+  const isClaimer = existing.claimed_by_user_id === user.userId
+  const isMod = user.role === "moderator" || user.role === "admin"
+
+  if (!isClaimer && !isMod) {
+    throw new AppError(403, "FORBIDDEN", "Only the operative who claimed this issue can resolve it")
+  }
+
+  // GPS proximity check for reporters — mods can resolve remotely
+  if (!isMod) {
+    const distance = getDistanceMeters(
+      latitude, longitude,
+      existing.latitude, existing.longitude
+    )
+
+    if (distance > 3) {
+      throw new AppError(403, "TOO_FAR", `You must be within 3 meters of the issue to resolve it. You are ${Math.round(distance)}m away.`)
+    }
+  }
+
+  const afterPhotoUrl = await uploadIssueAfterPhoto(req.file, id)
+
+  const result = await db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(issues)
+      .set({
+        status: "resolved",
+        afterPhotoUrl,
+      })
+      .where(eq(issues.id, id))
+      .returning({ id: issues.id, status: issues.status, userId: issues.userId })
+
+    if (!updated) throw new AppError(404, "NOT_FOUND", "Issue not found")
+
+    // Grant XP to the claimer
+    await tx
+      .update(users)
+      .set({ experience: sql`${users.experience} + ${XP_REWARDS.ISSUE_RESOLVED}` })
+      .where(eq(users.id, existing.claimed_by_user_id ?? user.userId))
+
+    return updated
+  })
+
+  try {
+    const [lng, lat] = [existing.longitude, existing.latitude]
+    broadcastIssueStatusUpdate(getIO(), result.id, result.status, existing.user_id, lat, lng)
+  } catch {}
+
+  return res.status(200).json({
+    status: "success",
+    data: { issue: result },
+  })
+})
+
+/**
  * @route   GET /api/issues/nearby
  * @desc    Returns issues within a given radius (meters) of a coordinate.
  * @access  Reporter, Moderator, Admin
@@ -134,7 +294,8 @@ export const getNearbyIssues = asyncHandler(async (req, res) => {
     SELECT
       i.id,
       i.description,
-      i.photo_url AS "photoUrl",
+      i.before_photo_url,
+      i.after_photo_url,
       i.status,
       i.created_at,
       ST_AsGeoJSON(i.location)::json AS location,
@@ -172,7 +333,8 @@ export const getIssueById = asyncHandler(async (req, res) => {
     SELECT
       i.id,
       i.description,
-      i.photo_url AS "photoUrl",
+      i.before_photo_url,
+      i.after_photo_url,
       i.status,
       i.created_at,
       ST_AsGeoJSON(i.location)::json AS location,

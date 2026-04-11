@@ -1,7 +1,7 @@
 import { Server as SocketServer } from "socket.io"
 import { db } from "../../db/index.js"
-import { userLocations } from "../../db/schema.js"
-import { sql } from "drizzle-orm"
+import { userLocations, users } from "../../db/schema.js"
+import { sql, ne } from "drizzle-orm"
 import { getSubscriptionRooms, getRoomForCoords } from "../geohash.js"
 import type { AuthenticatedSocket } from "../index.js"
 
@@ -12,11 +12,11 @@ type LocationPayload = {
 
 export function registerLocationHandlers(io: SocketServer, socket: AuthenticatedSocket) {
   const { userId, username } = socket.data.user
+  let isFirstUpdate = true
 
   socket.on("location:update", async (payload: LocationPayload) => {
     const { latitude, longitude } = payload
 
-    // Basic validation
     if (
       typeof latitude !== "number" || typeof longitude !== "number" ||
       latitude < -90 || latitude > 90 ||
@@ -43,11 +43,10 @@ export function registerLocationHandlers(io: SocketServer, socket: Authenticated
       return
     }
 
-    // 2. Update room subscriptions based on new geohash
+    // 2. Update room subscriptions
     const newRooms = getSubscriptionRooms(latitude, longitude)
     const currentRooms = socket.data.currentRooms
 
-    // Leave rooms no longer needed
     for (const room of currentRooms) {
       if (!newRooms.includes(room)) {
         socket.leave(room)
@@ -55,7 +54,6 @@ export function registerLocationHandlers(io: SocketServer, socket: Authenticated
       }
     }
 
-    // Join new rooms
     for (const room of newRooms) {
       if (!currentRooms.has(room)) {
         socket.join(room)
@@ -63,7 +61,7 @@ export function registerLocationHandlers(io: SocketServer, socket: Authenticated
       }
     }
 
-    // 3. Broadcast position to nearby clients (everyone in this geohash room except sender)
+    // 3. Broadcast own position to nearby clients
     const currentRoom = getRoomForCoords(latitude, longitude)
     socket.to(currentRoom).emit("players:moved", {
       userId,
@@ -71,5 +69,42 @@ export function registerLocationHandlers(io: SocketServer, socket: Authenticated
       latitude,
       longitude,
     })
+
+    // 4. On first location update, fetch existing nearby players from DB
+    // and send their positions back to this client so they appear immediately
+    if (isFirstUpdate) {
+      isFirstUpdate = false
+      try {
+        const nearby = await db.execute(sql`
+          SELECT
+            u.id,
+            u.username,
+            ST_Y(ul.location::geometry) AS latitude,
+            ST_X(ul.location::geometry) AS longitude
+          FROM user_locations ul
+          JOIN users u ON u.id = ul.user_id
+          WHERE
+            ul.user_id != ${userId}
+            AND ST_DWithin(
+              ul.location,
+              ST_MakePoint(${longitude}, ${latitude})::geography,
+              5000
+            )
+            AND ul.updated_at > now() - interval '2 minutes'
+        `) as any[]
+
+        // Send each nearby player's position directly to the connecting client
+        for (const player of nearby) {
+          socket.emit("players:moved", {
+            userId: player.id,
+            username: player.username,
+            latitude: player.latitude,
+            longitude: player.longitude,
+          })
+        }
+      } catch (err) {
+        console.error("[WS] Failed to fetch existing nearby players:", err)
+      }
+    }
   })
 }

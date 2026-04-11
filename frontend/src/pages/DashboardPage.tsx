@@ -12,7 +12,6 @@ import PlayerContextMenu from '../components/Map/PlayerContextMenu'
 import FriendsPanel from '../components/User/FriendsPanel'
 
 import { useAuthStore } from '../stores/auth.store'
-import { useThemeStore } from '../stores/theme.store'
 import { useDeviceFacing } from '../hooks/device/useDeviceFacing'
 import { useIssues } from '../hooks/issues/useIssues'
 import { useNearbyIssues } from '../hooks/issues/useNearbyIssues'
@@ -42,7 +41,6 @@ export default function DashboardPage() {
 
   const user = useAuthStore((state) => state.user)
   const setAuth = useAuthStore((state) => state.setAuth)
-  const mode = useThemeStore((state) => state.mode)
 
   const { issues, addIssue, mergeIssues, updateIssueStatus, removeIssue } = useIssues()
   const { facing, requestPermission, permissionState } = useDeviceFacing()
@@ -91,10 +89,6 @@ export default function DashboardPage() {
     return () => disconnectSocket()
   }, [])
 
-  const mapStyle = mode === 'dark'
-    ? 'mapbox://styles/mapbox/navigation-night-v1'
-    : 'mapbox://styles/mapbox/standard'
-
   const handleMapClick = useCallback((e: MapMouseEvent) => {
     if (selectedIssue) { setSelectedIssue(null); return }
     setPendingPin({ latitude: e.lngLat.lat, longitude: e.lngLat.lng })
@@ -129,13 +123,13 @@ export default function DashboardPage() {
     }
   }, [acceptRequest, friendRequests, addFriend])
 
-  const handleFormSubmit = useCallback(async (description: string, photo: File | null) => {
+  const handleFormSubmit = useCallback(async (description: string, photo: File) => {
     if (!pendingPin || !user) return
     const { issue, newTotalPoints, newExperience, newLevel } = await issuesApi.create({
       description,
       latitude: pendingPin.latitude,
       longitude: pendingPin.longitude,
-      photo: photo ?? undefined,
+      photo,
     })
     addIssue(issue)
     setAuth(useAuthStore.getState().accessToken!, {
@@ -169,7 +163,6 @@ export default function DashboardPage() {
   return (
     <div className="relative w-screen h-screen">
       <MapView
-        mapStyle={mapStyle}
         userLocation={userLocation}
         facing={facing}
         players={players}
@@ -205,10 +198,20 @@ export default function DashboardPage() {
       {selectedIssue && (
         <IssueDetail
           issue={selectedIssue}
+          userLocation={userLocation}
           onClose={handleDetailClose}
           onDelete={async (id) => {
             await issuesApi.delete(id)
             removeIssue(id)
+            setSelectedIssue(null)
+          }}
+          onClaim={async (id, latitude, longitude) => {
+            await issuesApi.claim(id, latitude, longitude)
+            updateIssueStatus(id, 'claimed')
+          }}
+          onResolve={async (id, afterPhoto, latitude, longitude) => {
+            await issuesApi.resolve(id, { latitude, longitude, afterPhoto })
+            updateIssueStatus(id, 'resolved')
             setSelectedIssue(null)
           }}
         />

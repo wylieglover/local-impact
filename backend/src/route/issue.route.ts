@@ -7,13 +7,16 @@ import {
   createIssueSchema,
   updateIssueStatusSchema,
   nearbyIssuesQuerySchema,
-  idParamSchema
+  idParamSchema,
+  claimIssueSchema
 } from "../schema/issue.schema.js";
 import {
+  claimIssue,
   createIssue,
   deleteIssue,
   getIssueById,
   getNearbyIssues,
+  resolveIssue,
   updateIssueStatus,
 } from "../controller/issue.controller.js";
 
@@ -43,6 +46,21 @@ issuesRoutes.post(
   createIssue
 );
 
+issuesRoutes.post(
+  "/:id/claim",
+  validate({ params: idParamSchema, body: claimIssueSchema }),
+  authorize("reporter", "moderator", "admin"),
+  claimIssue  
+);
+
+issuesRoutes.post(
+  "/:id/resolve",
+  upload.single("after_photo"),
+  validate({ params: idParamSchema }),
+  authorize("reporter", "moderator", "admin"),
+  resolveIssue
+);
+  
 issuesRoutes.patch(
   "/:id/status",
   validate({ params: idParamSchema, body: updateIssueStatusSchema }),

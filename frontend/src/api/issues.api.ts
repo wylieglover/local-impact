@@ -1,17 +1,19 @@
 import { apiClient } from "./client"
 
-export type IssueStatus = "open" | "in_progress" | "resolved"
+export type IssueStatus = "open" | "claimed" | "in_progress" | "resolved"
 
 export type Issue = {
   id: string
   description: string
-  photoUrl: string | null
+  beforePhotoUrl: string | null
+  afterPhotoUrl: string | null
   status: IssueStatus
   created_at: string
   username: string
   avatar_url: string | null
   latitude: number
   longitude: number
+  claimedByUserId: string | null
   distance_meters?: number
 }
 
@@ -22,19 +24,21 @@ type CreateIssueResponse = {
   newLevel: number
 }
 
-// Raw shape returned by the backend before mapping
 type RawIssue = {
   id: string
   description: string
-  photoUrl?: string | null
-  photo_url?: string | null
+  beforePhotoUrl?: string | null
+  before_photo_url?: string | null
+  afterPhotoUrl?: string | null
+  after_photo_url?: string | null
   status: IssueStatus
   created_at: string
   username: string
   avatar_url: string | null
+  claimed_by_user_id?: string | null
   location: {
     type: "Point"
-    coordinates: [number, number] // [longitude, latitude]
+    coordinates: [number, number]
   }
   distance_meters?: number
 }
@@ -43,11 +47,13 @@ function mapRawIssue(raw: RawIssue): Issue {
   return {
     id: raw.id,
     description: raw.description,
-    photoUrl: raw.photoUrl ?? raw.photo_url ?? null,
+    beforePhotoUrl: raw.beforePhotoUrl ?? raw.before_photo_url ?? null,
+    afterPhotoUrl: raw.afterPhotoUrl ?? raw.after_photo_url ?? null,
     status: raw.status,
     created_at: raw.created_at,
     username: raw.username,
     avatar_url: raw.avatar_url,
+    claimedByUserId: raw.claimed_by_user_id ?? null,
     latitude: raw.location.coordinates[1],
     longitude: raw.location.coordinates[0],
     distance_meters: raw.distance_meters,
@@ -59,13 +65,13 @@ export const issuesApi = {
     description: string
     latitude: number
     longitude: number
-    photo?: File
+    photo: File // now required
   }): Promise<CreateIssueResponse> => {
     const formData = new FormData()
     formData.append("description", data.description)
     formData.append("latitude", String(data.latitude))
     formData.append("longitude", String(data.longitude))
-    if (data.photo) formData.append("photo", data.photo)
+    formData.append("photo", data.photo)
 
     const res = await apiClient.post("/issues", formData, {
       headers: { "Content-Type": "multipart/form-data" },
@@ -75,7 +81,7 @@ export const issuesApi = {
       issue: mapRawIssue(res.data.data.issue),
       newTotalPoints: res.data.data.newTotalPoints,
       newExperience: res.data.data.newExperience,
-      newLevel: res.data.data.newLevel, 
+      newLevel: res.data.data.newLevel,
     }
   },
 
@@ -92,18 +98,31 @@ export const issuesApi = {
   },
 
   getById: async (id: string): Promise<Issue> => {
-    const res = await apiClient.get<{ data: { issue: RawIssue } }>(
-      `/issues/${id}`
-    )
+    const res = await apiClient.get<{ data: { issue: RawIssue } }>(`/issues/${id}`)
     return mapRawIssue(res.data.data.issue)
   },
 
-  updateStatus: async (id: string, status: IssueStatus): Promise<Issue> => {
-    const res = await apiClient.patch<{ data: { issue: RawIssue } }>(
-      `/issues/${id}/status`,
-      { status }
-    )
-    return mapRawIssue(res.data.data.issue)
+  claim: async (id: string, latitude: number, longitude: number): Promise<void> => {
+    await apiClient.post(`/issues/${id}/claim`, { latitude, longitude })
+  },
+
+  resolve: async (id: string, data: {
+    latitude: number
+    longitude: number
+    afterPhoto: File
+  }): Promise<void> => {
+    const formData = new FormData()
+    formData.append("latitude", String(data.latitude))
+    formData.append("longitude", String(data.longitude))
+    formData.append("after_photo", data.afterPhoto)
+
+    await apiClient.post(`/issues/${id}/resolve`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })
+  },
+
+  updateStatus: async (id: string, status: IssueStatus): Promise<void> => {
+    await apiClient.patch(`/issues/${id}/status`, { status })
   },
 
   delete: async (id: string): Promise<void> => {

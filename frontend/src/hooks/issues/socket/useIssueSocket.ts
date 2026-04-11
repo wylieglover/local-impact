@@ -8,17 +8,18 @@ type Handlers = {
   onDeleted: (id: string) => void
 }
 
-// Shape the server emits for issues:new
 type RawSocketIssue = {
   id: string
   description: string
-  photoUrl: string | null
+  beforePhotoUrl: string | null
+  afterPhotoUrl: string | null
   status: IssueStatus
   createdAt: string
   latitude: number
   longitude: number
   username: string
   avatar_url: string | null
+  claimedByUserId: string | null
 }
 
 export function useIssueSocket({ onNewIssue, onStatusChanged, onDeleted }: Handlers) {
@@ -29,13 +30,15 @@ export function useIssueSocket({ onNewIssue, onStatusChanged, onDeleted }: Handl
       onNewIssue({
         id: raw.id,
         description: raw.description,
-        photoUrl: raw.photoUrl,
+        beforePhotoUrl: raw.beforePhotoUrl,
+        afterPhotoUrl: raw.afterPhotoUrl,
         status: raw.status,
         created_at: raw.createdAt,
         latitude: raw.latitude,
         longitude: raw.longitude,
         username: raw.username,
         avatar_url: raw.avatar_url,
+        claimedByUserId: raw.claimedByUserId,
       })
     }
 

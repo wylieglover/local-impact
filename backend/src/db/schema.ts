@@ -34,7 +34,12 @@ const geography = customType<{ data: GeoPoint }>({
 
 // Enums
 export const userRole = pgEnum("user_role", ["reporter", "moderator", "admin"]);
-export const issueStatus = pgEnum("issue_status", ["open", "in_progress", "resolved"]);
+export const issueStatus = pgEnum("issue_status", [
+  "open",
+  "claimed",
+  "in_progress",
+  "resolved",
+]);
 export const friendshipStatus = pgEnum("friendship_status", ["pending", "accepted", "blocked"]);
 
 // Users
@@ -119,14 +124,19 @@ export const issues = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    claimedByUserId: uuid("claimed_by_user_id")
+      .references(() => users.id, { onDelete: "set null" }),
     description: text("description").notNull(),
-    photoUrl: text("photo_url"),
+    beforePhotoUrl: text("before_photo_url"),
+    afterPhotoUrl: text("after_photo_url"),
     location: geography("location").notNull(),
     status: issueStatus("status").notNull().default("open"),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("idx_issues_location").using("gist", sql`${table.location}`),
     index("idx_issues_status").on(table.status),
+    index("idx_issues_claimed_by").on(table.claimedByUserId),
   ]
 );
