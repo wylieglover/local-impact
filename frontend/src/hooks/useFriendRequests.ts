@@ -7,6 +7,8 @@ type UseFriendRequestsReturn = {
   sentRequests: SentRequest[]
   loading: boolean
   error: string | null
+  addRequest: (request: FriendRequest) => void
+  removeSentRequest: (userId: string) => void
   acceptRequest: (userId: string) => Promise<void>
   declineRequest: (userId: string) => Promise<void>
   refresh: () => void
@@ -32,10 +34,22 @@ export function useFriendRequests(): UseFriendRequestsReturn {
     }
   }, [])
 
+  // Initial fetch only — no polling
   useEffect(() => {
     setLoading(true)
     fetchRequests().finally(() => setLoading(false))
   }, [fetchRequests])
+
+  const addRequest = useCallback((request: FriendRequest) => {
+    setRequests((prev) => {
+      const exists = prev.some((r) => r.sender_id === request.sender_id)
+      return exists ? prev : [...prev, request]
+    })
+  }, [])
+
+  const removeSentRequest = useCallback((userId: string) => {
+    setSentRequests((prev) => prev.filter((r) => r.receiver_id !== userId))
+  }, [])
 
   const acceptRequest = useCallback(async (userId: string) => {
     await friendshipApi.acceptRequest(userId)
@@ -47,5 +61,15 @@ export function useFriendRequests(): UseFriendRequestsReturn {
     setRequests((prev) => prev.filter((r) => r.sender_id !== userId))
   }, [])
 
-  return { requests, sentRequests, loading, error, acceptRequest, declineRequest, refresh: fetchRequests }
+  return {
+    requests,
+    sentRequests,
+    loading,
+    error,
+    addRequest,
+    removeSentRequest,
+    acceptRequest,
+    declineRequest,
+    refresh: fetchRequests,
+  }
 }

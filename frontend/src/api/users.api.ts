@@ -50,10 +50,6 @@ function mapRawPlayer(raw: RawPlayer): Player {
 }
 
 export const usersApi = {
-  updateLocation: async (latitude: number, longitude: number): Promise<void> => {
-    await apiClient.patch("/users/location", { latitude, longitude })
-  },
-
   getNearbyPlayers: async (params: {
     latitude: number
     longitude: number

@@ -5,12 +5,13 @@ import { friendships, users, userLocations } from "../db/schema.js"
 import { eq, or, and, sql } from "drizzle-orm"
 import type { TokenPayload } from "../util/auth/token.js"
 import type { FriendUserIdParam } from "../schema/friendship.schema.js"
+import { getIO } from "../socket/index.js"
+import {
+  broadcastFriendRequest,
+  broadcastFriendRequestAccepted,
+  broadcastFriendRemoved,
+} from "../socket/handlers/friendship.handler.js"
 
-/**
- * @route   POST /api/friends/request/:userId
- * @desc    Send a friend request to another user.
- * @access  Reporter, Moderator, Admin
- */
 export const sendFriendRequest = asyncHandler(async (req, res) => {
   const { userId: receiverId } = res.locals.params as FriendUserIdParam
   const sender = res.locals.user as TokenPayload
@@ -19,7 +20,6 @@ export const sendFriendRequest = asyncHandler(async (req, res) => {
     throw new AppError(400, "INVALID_REQUEST", "You cannot add yourself as a friend")
   }
 
-  // Check target user exists
   const [targetUser] = await db
     .select({ id: users.id })
     .from(users)
@@ -29,7 +29,6 @@ export const sendFriendRequest = asyncHandler(async (req, res) => {
     throw new AppError(404, "NOT_FOUND", "User not found")
   }
 
-  // Check if any relationship already exists in either direction
   const [existing] = await db
     .select({ id: friendships.id, status: friendships.status })
     .from(friendships)
@@ -46,7 +45,7 @@ export const sendFriendRequest = asyncHandler(async (req, res) => {
       accepted: "You are already friends",
       blocked: "Unable to send friend request",
     }
-    throw new AppError(409, "ALREADY_EXISTS", messages[existing.status] || "Already exists");
+    throw new AppError(409, "ALREADY_EXISTS", messages[existing.status] || "Already exists")
   }
 
   const [request] = await db
@@ -58,17 +57,22 @@ export const sendFriendRequest = asyncHandler(async (req, res) => {
       createdAt: friendships.createdAt,
     })
 
+  // Notify receiver in real time
+  try {
+    broadcastFriendRequest(getIO(), receiverId, {
+      id: sender.userId,
+      username: sender.username,
+      avatar_url: null,
+      level: sender.level,
+    })
+  } catch {}
+
   return res.status(201).json({
     status: "success",
     data: { request },
   })
 })
 
-/**
- * @route   PATCH /api/friends/accept/:userId
- * @desc    Accept a pending friend request from a user.
- * @access  Reporter, Moderator, Admin
- */
 export const acceptFriendRequest = asyncHandler(async (req, res) => {
   const { userId: senderId } = res.locals.params as FriendUserIdParam
   const receiver = res.locals.user as TokenPayload
@@ -98,17 +102,37 @@ export const acceptFriendRequest = asyncHandler(async (req, res) => {
       updatedAt: friendships.updatedAt,
     })
 
+  // Fetch accepter's full profile to send back to the original sender
+  const [accepterProfile] = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      avatarUrl: users.avatarUrl,
+      level: users.level,
+      points: users.points,
+    })
+    .from(users)
+    .where(eq(users.id, receiver.userId))
+
+  // Notify the original sender their request was accepted
+  try {
+    if (accepterProfile) {
+      broadcastFriendRequestAccepted(getIO(), senderId, {
+        id: accepterProfile.id,
+        username: accepterProfile.username,
+        avatar_url: accepterProfile.avatarUrl,
+        level: accepterProfile.level,
+        points: accepterProfile.points,
+      })
+    }
+  } catch {}
+
   return res.status(200).json({
     status: "success",
     data: { friendship: updated },
   })
 })
 
-/**
- * @route   DELETE /api/friends/:userId
- * @desc    Remove a friend, decline a request, or cancel a sent request.
- * @access  Reporter, Moderator, Admin
- */
 export const removeFriend = asyncHandler(async (req, res) => {
   const { userId: targetId } = res.locals.params as FriendUserIdParam
   const user = res.locals.user as TokenPayload
@@ -129,14 +153,14 @@ export const removeFriend = asyncHandler(async (req, res) => {
 
   await db.delete(friendships).where(eq(friendships.id, existing.id))
 
+  // Notify both users
+  try {
+    broadcastFriendRemoved(getIO(), user.userId, targetId)
+  } catch {}
+
   return res.status(204).send()
 })
 
-/**
- * @route   GET /api/friends
- * @desc    Returns the user's accepted friends list with presence derived from location.
- * @access  Reporter, Moderator, Admin
- */
 export const getFriends = asyncHandler(async (req, res) => {
   const user = res.locals.user as TokenPayload
 
@@ -176,11 +200,6 @@ export const getFriends = asyncHandler(async (req, res) => {
   })
 })
 
-/**
- * @route   GET /api/friends/requests
- * @desc    Returns pending incoming friend requests.
- * @access  Reporter, Moderator, Admin
- */
 export const getFriendRequests = asyncHandler(async (req, res) => {
   const user = res.locals.user as TokenPayload
 
@@ -204,13 +223,8 @@ export const getFriendRequests = asyncHandler(async (req, res) => {
     status: "success",
     data: { requests },
   })
-});
+})
 
-/**
- * @route   GET /api/friends/sent
- * @desc    Returns pending outgoing friend requests.
- * @access  Reporter, Moderator, Admin
- */
 export const getSentRequests = asyncHandler(async (req, res) => {
   const user = res.locals.user as TokenPayload
 
@@ -234,4 +248,4 @@ export const getSentRequests = asyncHandler(async (req, res) => {
     status: "success",
     data: { sent },
   })
-});
+})

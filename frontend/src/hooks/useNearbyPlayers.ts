@@ -1,19 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { usersApi } from "../api/users.api"
 import type { Player } from "../api/users.api"
-
-const POLL_INTERVAL_MS = 5000
+import { connectSocket } from "../lib/socket"
 
 type UserLocation = { latitude: number; longitude: number }
-
-type UseNearbyPlayersOptions = {
-  radius?: number
-}
-
+type UseNearbyPlayersOptions = { radius?: number }
 type UseNearbyPlayersReturn = {
   players: Player[]
   loading: boolean
   error: string | null
+}
+
+type PlayerMovedPayload = {
+  userId: string
+  username: string
+  latitude: number
+  longitude: number
 }
 
 export function useNearbyPlayers(
@@ -21,12 +23,9 @@ export function useNearbyPlayers(
   options: UseNearbyPlayersOptions = {}
 ): UseNearbyPlayersReturn {
   const { radius = 1609 } = options
-
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Keep radius stable in a ref so the interval doesn't need to re-register
   const radiusRef = useRef(radius)
   useEffect(() => { radiusRef.current = radius }, [radius])
 
@@ -44,19 +43,42 @@ export function useNearbyPlayers(
     }
   }, [])
 
+  // Initial fetch only — no polling interval
   useEffect(() => {
     if (!location) return
-
-    // Fetch immediately on mount / location becoming available
     setLoading(true)
     fetchPlayers(location).finally(() => setLoading(false))
+  }, []) // intentionally empty — only runs on mount
 
-    const intervalId = setInterval(() => {
-      fetchPlayers(location)
-    }, POLL_INTERVAL_MS)
+  // Socket — update player positions in real time
+  useEffect(() => {
+    const socket = connectSocket()
 
-    return () => clearInterval(intervalId)
-  }, [location, fetchPlayers])
+    const handlePlayerMoved = ({ userId, username, latitude, longitude }: PlayerMovedPayload) => {
+      setPlayers((prev) => {
+        const exists = prev.some((p) => p.id === userId)
+        if (exists) {
+          // Update position of existing player
+          return prev.map((p) =>
+            p.id === userId ? { ...p, latitude, longitude } : p
+          )
+        }
+        // New player entered our geohash — add them
+        return [...prev, {
+          id: userId,
+          username,
+          avatar_url: null,
+          role: "reporter" as const,
+          latitude,
+          longitude,
+          distance_meters: 0,
+        }]
+      })
+    }
+
+    socket.on("players:moved", handlePlayerMoved)
+    return () => { socket.off("players:moved", handlePlayerMoved) }
+  }, [])
 
   return { players, loading, error }
 }

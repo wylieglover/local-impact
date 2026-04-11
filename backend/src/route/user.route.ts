@@ -4,13 +4,11 @@ import { validate } from "../middleware/validation.middleware.js"
 import { authenticate } from "../middleware/authenticate.middleware.js"
 import { authorize } from "../middleware/authorize.middleware.js"
 import {
-  updateLocationSchema,
   nearbyPlayersQuerySchema,
   userIdParamSchema,
   updateMeSchema,
 } from "../schema/user.schema.js"
 import {
-  updateLocation,
   getNearbyPlayers,
   getMe,  
   getUserById,
@@ -32,13 +30,6 @@ userRoutes.get(
   validate({ query: nearbyPlayersQuerySchema }),
   authorize("reporter", "moderator", "admin"),
   getNearbyPlayers
-);
-
-userRoutes.patch(
-  "/location",
-  validate({ body: updateLocationSchema }),
-  authorize("reporter", "moderator", "admin"),
-  updateLocation
 );
 
 userRoutes.patch(

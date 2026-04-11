@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { MapMouseEvent } from 'react-map-gl/mapbox'
 
 import MapView from '../components/Map/MapView'
@@ -8,6 +8,8 @@ import ProfilePanel from '../components/User/ProfilePanel'
 import UserHUD from '../components/User/UserHUD'
 import XPBar from '../components/UI/XPBar'
 import MapControls from '../components/Map/MapControls'
+import PlayerContextMenu from '../components/Map/PlayerContextMenu'
+import FriendsPanel from '../components/User/FriendsPanel'
 
 import { useAuthStore } from '../stores/auth.store'
 import { useThemeStore } from '../stores/theme.store'
@@ -16,40 +18,63 @@ import { useIssues } from '../hooks/useIssues'
 import { useNearbyIssues } from '../hooks/useNearbyIssues'
 import { usePlayerLocation } from '../hooks/usePlayerLocation'
 import { useNearbyPlayers } from '../hooks/useNearbyPlayers'
-import { issuesApi } from '../api/issues.api'
-import type { Issue } from '../api/issues.api'
+import { useIssueSocket } from '../hooks/useIssueSocket'
+import { useLocationSocket } from '../hooks/useLocationSocket'
+import { useFriendSocket } from '../hooks/useFriendSocket'
 
-import PlayerContextMenu from '../components/Map/PlayerContextMenu'
-import type { Player } from '../api/users.api'
-
-import FriendsPanel from '../components/User/FriendsPanel'
 import { useFriends } from '../hooks/useFriends'
 import { useFriendRequests } from '../hooks/useFriendRequests'
+import { disconnectSocket } from '../lib/socket'
+import { issuesApi } from '../api/issues.api'
+import type { Issue } from '../api/issues.api'
+import type { Player } from '../api/users.api'
 
 export default function DashboardPage() {
   const { userLocation, locationError } = usePlayerLocation()
 
   const [pendingPin, setPendingPin] = useState<{ latitude: number; longitude: number } | null>(null)
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
-
   const [showProfile, setShowProfile] = useState(false)
   const [profileUserId, setProfileUserId] = useState<string | undefined>(undefined)
-
   const [contextPlayer, setContextPlayer] = useState<Player | null>(null)
   const [contextPosition, setContextPosition] = useState<{ x: number; y: number } | null>(null)
+  const [showFriends, setShowFriends] = useState(false)
 
   const user = useAuthStore((state) => state.user)
   const setAuth = useAuthStore((state) => state.setAuth)
   const mode = useThemeStore((state) => state.mode)
-  
-  const { issues, addIssue, mergeIssues, removeIssue } = useIssues()
+
+  const { issues, addIssue, mergeIssues, updateIssueStatus, removeIssue } = useIssues()
   const { facing, requestPermission, permissionState } = useDeviceFacing()
   const { loading: loadingNearby, error: nearbyError, refresh } = useNearbyIssues(userLocation, mergeIssues, { radius: 1609 })
   const { players } = useNearbyPlayers(userLocation, { radius: 1609 })
-  
-  const { friends } = useFriends()
-  const { requests: friendRequests, sentRequests } = useFriendRequests()
-  const [showFriends, setShowFriends] = useState(false)
+  const { friends, addFriend, removeFriend: removeFriendFromList } = useFriends()
+  const { requests: friendRequests, sentRequests, addRequest, removeSentRequest } = useFriendRequests()
+
+  // Socket - real time friendship events
+  useFriendSocket({
+    onRequestReceived: addRequest,
+    onRequestAccepted: (friend) => {
+      addFriend(friend)
+      removeSentRequest(friend.id)
+    },
+    onFriendRemoved: removeFriendFromList,
+  })
+
+  // Socket — real time issue events
+  useIssueSocket({
+    onNewIssue: addIssue,
+    onStatusChanged: updateIssueStatus,
+    onDeleted: removeIssue,
+  })
+
+  // Socket — push our location to nearby players
+  useLocationSocket(userLocation)
+
+  // Disconnect cleanly when leaving the dashboard
+  useEffect(() => {
+    return () => disconnectSocket()
+  }, [])
 
   const mapStyle = mode === 'dark'
     ? 'mapbox://styles/mapbox/navigation-night-v1'
@@ -111,7 +136,6 @@ export default function DashboardPage() {
 
   return (
     <div className="relative w-screen h-screen">
-      {/* Map fills the entire background */}
       <MapView
         mapStyle={mapStyle}
         userLocation={userLocation}
@@ -126,7 +150,6 @@ export default function DashboardPage() {
         onPlayerClick={handlePlayerClick}
       />
 
-      {/* UI overlays sit on top */}
       <UserHUD
         onOpenProfile={() => { setProfileUserId(undefined); setShowProfile(true) }}
         onOpenFriends={() => setShowFriends(true)}

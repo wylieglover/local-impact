@@ -1,5 +1,3 @@
-// Create a new file: components/Map/IssueClusterMarker.tsx
-
 type ClusterProps = {
   count: number
   pointCount: number

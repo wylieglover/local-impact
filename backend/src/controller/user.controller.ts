@@ -1,43 +1,11 @@
 import { asyncHandler } from "../util/asyncHandler.js"
 import { AppError } from "../middleware/error.middleware.js"
 import { db } from "../db/index.js"
-import { users, userLocations } from "../db/schema.js"
+import { users } from "../db/schema.js"
 import { sql, eq } from "drizzle-orm"
 import type { TokenPayload } from "../util/auth/token.js"
-import type { UpdateLocationInput, NearbyPlayersQuery, UserIdParam, UpdateMeInput } from "../schema/user.schema.js"
+import type { NearbyPlayersQuery, UserIdParam, UpdateMeInput } from "../schema/user.schema.js"
 import { uploadAvatarPhoto } from "../service/storage.service.js"
-
-/**
- * @route   PATCH /api/users/location
- * @desc    Upserts the authenticated user's current location.
- * @access  Reporter, Moderator, Admin
- */
-export const updateLocation = asyncHandler(async (req, res) => {
-  const body = res.locals.body as UpdateLocationInput;
-  const user = res.locals.user as TokenPayload;
-
-  await db
-    .insert(userLocations)
-    .values({
-      userId: user.userId,
-      location: {
-        type: "Point",
-        coordinates: [body.longitude, body.latitude],
-      },
-    })
-    .onConflictDoUpdate({
-      target: userLocations.userId,
-      set: {
-        location: sql`excluded.location`,
-        updatedAt: sql`now()`,
-      },
-    });
-
-  return res.status(200).json({
-    status: "success",
-    data: null,
-  });
-})
 
 /**
  * @route   GET /api/users/nearby

@@ -11,8 +11,13 @@ import { errorHandler } from "./middleware/error.middleware.js";
 import { issuesRoutes } from "./route/issue.route.js";
 import { userRoutes } from "./route/user.route.js";
 import { friendshipRoutes } from "./route/friendship.route.js";
+import { createServer } from "http";
+import { initSocket } from "./socket/index.js";
 
 const app = express();
+
+const httpServer = createServer(app)
+initSocket(httpServer)
 
 // Logging (Put this first to catch everything)
 app.use(pinoHttp({ logger }));
@@ -42,9 +47,9 @@ app.use("/api/friends", friendshipRoutes);
 
 app.use(errorHandler);
 
-app.listen(env.PORT, () => {
-  logger.info(`Local Impact API is live on ${env.BACKEND_URL}`);
-  logger.info(`Environment: ${env.NODE_ENV}`);
-}).on('error', (err) => {
-  console.error('Failed to start server:', err);
-});
+httpServer.listen(env.PORT, () => {
+  logger.info(`Local Impact API is live on ${env.BACKEND_URL}`)
+  logger.info(`Environment: ${env.NODE_ENV}`)
+}).on("error", (err) => {
+  console.error("Failed to start server:", err)
+})

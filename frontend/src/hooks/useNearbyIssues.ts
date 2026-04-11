@@ -5,15 +5,8 @@ import { getDistanceMeters } from '../utils/geo'
 
 const MIN_FETCH_DISTANCE_METERS = 100
 
-type Location = {
-  latitude: number
-  longitude: number
-}
-
-type UseNearbyIssuesOptions = {
-  radius?: number
-}
-
+type Location = { latitude: number; longitude: number }
+type UseNearbyIssuesOptions = { radius?: number }
 type UseNearbyIssuesReturn = {
   loading: boolean
   error: string | null
@@ -28,12 +21,9 @@ export function useNearbyIssues(
   const { radius = 2000 } = options
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
   const onFetchedRef = useRef(onFetched)
   useEffect(() => { onFetchedRef.current = onFetched }, [onFetched])
 
-  // Last location we actually fetched from — only update when
-  // user has moved MIN_FETCH_DISTANCE_METERS from this point
   const lastFetchLocation = useRef<Location | null>(null)
 
   const fetchIssues = useCallback(async (loc: Location) => {
@@ -54,19 +44,15 @@ export function useNearbyIssues(
     }
   }, [radius])
 
+  // Only re-fetch when user moves 100m+ — no polling interval
   useEffect(() => {
     if (!location) return
-
     const last = lastFetchLocation.current
-    const movedFarEnough =
-      !last || getDistanceMeters(last, location) >= MIN_FETCH_DISTANCE_METERS
-
+    const movedFarEnough = !last || getDistanceMeters(last, location) >= MIN_FETCH_DISTANCE_METERS
     if (!movedFarEnough) return
-
     fetchIssues(location)
   }, [location?.latitude, location?.longitude, fetchIssues])
 
-  // Manual refresh bypasses the distance gate — useful for the retry button
   const refresh = useCallback(() => {
     if (location) fetchIssues(location)
   }, [location, fetchIssues])

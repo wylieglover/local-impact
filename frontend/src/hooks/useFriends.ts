@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback } from "react"
 import { friendshipApi } from "../api/friendship.api"
 import type { Friend } from "../api/friendship.api"
 
-const POLL_INTERVAL_MS = 30000
-
 type UseFriendsReturn = {
   friends: Friend[]
   loading: boolean
   error: string | null
   refresh: () => void
+  addFriend: (friend: Friend) => void
+  removeFriend: (userId: string) => void
 }
 
 export function useFriends(): UseFriendsReturn {
@@ -26,13 +26,22 @@ export function useFriends(): UseFriendsReturn {
     }
   }, [])
 
+  // Initial fetch only — no polling
   useEffect(() => {
     setLoading(true)
     fetchFriends().finally(() => setLoading(false))
-
-    const intervalId = setInterval(fetchFriends, POLL_INTERVAL_MS)
-    return () => clearInterval(intervalId)
   }, [fetchFriends])
 
-  return { friends, loading, error, refresh: fetchFriends }
+  const addFriend = useCallback((friend: Friend) => {
+    setFriends((prev) => {
+      const exists = prev.some((f) => f.id === friend.id)
+      return exists ? prev : [...prev, friend]
+    })
+  }, [])
+
+  const removeFriend = useCallback((userId: string) => {
+    setFriends((prev) => prev.filter((f) => f.id !== userId))
+  }, [])
+
+  return { friends, loading, error, refresh: fetchFriends, addFriend, removeFriend }
 }
