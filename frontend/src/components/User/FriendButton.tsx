@@ -1,4 +1,4 @@
-import { useFriendship } from '../../hooks/useFriendship'
+import { useFriendship } from '../../hooks/friendship/useFriendship'
 import type { Friend, FriendRequest, SentRequest } from '../../api/friendship.api'
 
 type Props = {

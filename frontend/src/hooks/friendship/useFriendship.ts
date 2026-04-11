@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
-import { friendshipApi } from "../api/friendship.api"
-import type { Friend, FriendRequest, SentRequest } from "../api/friendship.api"
+import { friendshipApi } from "../../api/friendship.api"
+import type { Friend, FriendRequest, SentRequest } from "../../api/friendship.api"
 
 type FriendshipState = "none" | "pending_sent" | "pending_received" | "accepted" | "loading"
 

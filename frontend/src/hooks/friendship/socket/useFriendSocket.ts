@@ -1,6 +1,6 @@
 import { useEffect } from "react"
-import { connectSocket } from "../lib/socket"
-import type { Friend, FriendRequest } from "../api/friendship.api"
+import { connectSocket } from "../../../lib/socket"
+import type { Friend, FriendRequest } from "../../../api/friendship.api"
 
 type Handlers = {
   onRequestReceived: (request: FriendRequest) => void

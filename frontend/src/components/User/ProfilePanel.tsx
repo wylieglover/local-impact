@@ -1,6 +1,6 @@
 import { useState, useRef } from "react"
 import { useAuthStore } from "../../stores/auth.store"
-import { useProfile } from "../../hooks/useProfile"
+import { useProfile } from "../../hooks/users/useProfile"
 import { usersApi } from "../../api/users.api"
 import type { OwnProfile } from "../../api/users.api"
 import type { FriendRequest, Friend, SentRequest } from "../../api/friendship.api"
@@ -108,7 +108,7 @@ export default function ProfilePanel({ userId, onClose, friends, friendRequests,
     </div>
   )
 
-  const role = ROLE_CONFIG[profile.role]
+  const role = ROLE_CONFIG[profile.role as keyof typeof ROLE_CONFIG]
   const displayAvatar = avatarPreview ?? profile.avatarUrl
 
   return (

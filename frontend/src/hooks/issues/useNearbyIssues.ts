@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { issuesApi } from '../api/issues.api'
-import type { Issue } from '../api/issues.api'
-import { getDistanceMeters } from '../utils/geo'
+import { issuesApi } from '../../api/issues.api'
+import type { Issue } from '../../api/issues.api'
+import { getDistanceMeters } from '../../utils/geo'
 
 const MIN_FETCH_DISTANCE_METERS = 100
 

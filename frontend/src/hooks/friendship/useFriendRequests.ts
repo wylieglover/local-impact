@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
-import { friendshipApi } from "../api/friendship.api"
-import type { FriendRequest, SentRequest } from "../api/friendship.api"
+import { friendshipApi } from "../../api/friendship.api"
+import type { FriendRequest, SentRequest } from "../../api/friendship.api"
 
 type UseFriendRequestsReturn = {
   requests: FriendRequest[]

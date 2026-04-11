@@ -1,6 +1,6 @@
 import { useEffect } from "react"
-import { connectSocket } from "../lib/socket"
-import type { Issue, IssueStatus } from "../api/issues.api"
+import { connectSocket } from "../../../lib/socket"
+import type { Issue, IssueStatus } from "../../../api/issues.api"
 
 type Handlers = {
   onNewIssue: (issue: Issue) => void

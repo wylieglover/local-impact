@@ -1,6 +1,6 @@
 import { useState } from "react"
-import { useFriends } from "../../hooks/useFriends"
-import { useFriendRequests } from "../../hooks/useFriendRequests"
+import { useFriends } from "../../hooks/friendship/useFriends"
+import { useFriendRequests } from "../../hooks/friendship/useFriendRequests"
 import type { Friend } from "../../api/friendship.api"
 
 const PRESENCE_CONFIG = {

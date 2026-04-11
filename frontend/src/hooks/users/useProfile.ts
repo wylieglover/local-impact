@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
-import { usersApi } from "../api/users.api"
-import type { UserProfile, OwnProfile } from "../api/users.api"
+import { usersApi } from "../../api/users.api"
+import type { UserProfile, OwnProfile } from "../../api/users.api"
 
 type UseProfileReturn = {
   profile: UserProfile | OwnProfile | null

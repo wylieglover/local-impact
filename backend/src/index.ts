@@ -15,9 +15,9 @@ import { createServer } from "http";
 import { initSocket } from "./socket/index.js";
 
 const app = express();
+const httpServer = createServer(app);
 
-const httpServer = createServer(app)
-initSocket(httpServer)
+initSocket(httpServer);
 
 // Logging (Put this first to catch everything)
 app.use(pinoHttp({ logger }));

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
-import { usersApi } from "../api/users.api"
-import type { Player } from "../api/users.api"
-import { connectSocket } from "../lib/socket"
+import { usersApi } from "../../api/users.api"
+import type { Player } from "../../api/users.api"
+import { connectSocket } from "../../lib/socket"
 
 type UserLocation = { latitude: number; longitude: number }
 type UseNearbyPlayersOptions = { radius?: number }

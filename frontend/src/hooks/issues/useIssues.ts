@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import type { Issue } from '../api/issues.api'
+import type { Issue } from '../../api/issues.api'
 
 export function useIssues() {
   const [issues, setIssues] = useState<Issue[]>([])

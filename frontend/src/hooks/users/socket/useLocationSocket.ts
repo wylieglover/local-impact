@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react"
-import { connectSocket } from "../lib/socket"
+import { connectSocket } from "../../../lib/socket"
 
 const MIN_DISTANCE_METERS = 10
 
