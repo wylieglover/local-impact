@@ -21,6 +21,11 @@ const STATUS_THEME = {
     secondary: '#064e3b',
     glow: 'rgba(16, 185, 129, 0.5)',
   },
+  claimed: {
+    primary: '#8b5cf6', // Violet
+    secondary: '#4c1d95',
+    glow: 'rgba(139, 92, 246, 0.5)',
+  },
 }
 
 export default function IssueMarker({ issue, isSelected }: IssueMarkerProps) {
