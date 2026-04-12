@@ -1,6 +1,7 @@
 import axios from "axios"
 import { useAuthStore } from "../stores/auth.store"
 import { plainClient } from "./plainClient"
+import { authApi } from "./auth.api"
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -58,20 +59,9 @@ apiClient.interceptors.response.use(
     isRefreshing = true
 
     try {
-      const { data } = await plainClient.post("/auth/refresh") // ← fixed
-      const newToken = data.data.accessToken
-      const refreshedUser = data.data.user
-
-      useAuthStore.getState().setAuth(newToken, {
-        userId: refreshedUser.id,
-        username: refreshedUser.username,
-        role: refreshedUser.role,
-        points: refreshedUser.points ?? 0,
-        experience: refreshedUser.experience ?? 0,
-        level: refreshedUser.level ?? 1
-      })
+      const newToken = await authApi.refreshSession();
+      
       processQueue(null, newToken)
-
       originalRequest.headers.Authorization = `Bearer ${newToken}`
       return apiClient(originalRequest)
     } catch (refreshError) {

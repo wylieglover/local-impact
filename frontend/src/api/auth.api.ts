@@ -1,6 +1,6 @@
 import { apiClient } from "./client"
 import { useAuthStore } from "../stores/auth.store"
-
+import { plainClient } from "./plainClient"
 /**
  * Matches the actual JSON structure returned by your Express controllers.
  * Note: 'id' comes from the DB/Backend, which we map to 'userId' for Zustand.
@@ -60,6 +60,22 @@ export const authApi = {
     return res.data.data
   },
   
+  refreshSession: async () => {
+    const res = await plainClient.post("/auth/refresh");
+    const { accessToken, user } = res.data.data;
+
+    useAuthStore.getState().setAuth(accessToken, {
+      userId: user.id,
+      username: user.username,
+      role: user.role,
+      points: user.points ?? 0,
+      experience: user.experience ?? 0,
+      level: user.level ?? 1
+    });
+
+    return accessToken;
+  },
+
   logout: async () => {
     // Clears the backend session and the HttpOnly cookie
     await apiClient.post("/auth/logout")

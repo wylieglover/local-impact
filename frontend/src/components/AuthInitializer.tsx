@@ -1,7 +1,7 @@
 import { plainClient } from "../api/plainClient"
 import { useEffect, useState, useRef } from "react"
 import { useAuthStore } from "../stores/auth.store"
-
+import { authApi } from "../api/auth.api"
 type Props = {
   children: React.ReactNode
 }
