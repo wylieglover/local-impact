@@ -22,7 +22,7 @@ const STATUS_THEME = {
     glow: 'rgba(16, 185, 129, 0.5)',
   },
   claimed: {
-    primary: '#8b5cf6', // Violet
+    primary: '#8b5cf6',
     secondary: '#4c1d95',
     glow: 'rgba(139, 92, 246, 0.5)',
   },

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapGL, {
   Marker,
+  Source,
   AttributionControl,
   type MapRef,
 } from 'react-map-gl/mapbox'
@@ -50,54 +51,35 @@ export default function MapView({
   const [zoom, setZoom] = useState(15)
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null)
 
-  // 🔥 Smooth visual location (animation layer)
-  const [displayLocation, setDisplayLocation] = useState(userLocation)
-  const animationRef = useRef<number | null>(null)
+  const mode = useThemeStore((state) => state.mode)
 
-  useEffect(() => {
-    if (!userLocation) return
-
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current)
-    }
-
-    const animate = () => {
-      setDisplayLocation((prev) => {
-        if (!prev) return userLocation
-
-        const lerp = 0.15 // tune this (0.1 = smoother, 0.25 = snappier)
-
-        return {
-          latitude: prev.latitude + (userLocation.latitude - prev.latitude) * lerp,
-          longitude: prev.longitude + (userLocation.longitude - prev.longitude) * lerp,
-        }
-      })
-
-      animationRef.current = requestAnimationFrame(animate)
-    }
-
-    animate()
-
-    return () => {
-      if (animationRef.current) cancelAnimationFrame(animationRef.current)
-    }
-  }, [userLocation.latitude, userLocation.longitude])
-
-  // 🧠 OPTIONAL: smooth camera follow (disabled by default)
+  // Smooth camera follow (optional)
   const isFollowMode = false
 
   useEffect(() => {
-    if (!isFollowMode || !displayLocation) return
+    if (!isFollowMode || !userLocation) return
 
     const map = mapRef.current?.getMap()
     if (!map) return
 
     map.easeTo({
-      center: [displayLocation.longitude, displayLocation.latitude],
-      duration: 800,
+      center: [userLocation.longitude, userLocation.latitude],
+      duration: 600,
       easing: (t) => t,
     })
-  }, [displayLocation])
+  }, [userLocation, isFollowMode])
+
+  // Update theme dynamically
+  useEffect(() => {
+    const map = mapRef.current?.getMap()
+    if (!map) return
+
+    map.setConfigProperty(
+      'basemap',
+      'lightPreset',
+      mode === 'dark' ? 'night' : 'day'
+    )
+  }, [mode])
 
   const onMove = useCallback(() => {
     const map = mapRef.current?.getMap()
@@ -137,31 +119,17 @@ export default function MapView({
     return cluster.getClusters(bounds, Math.round(zoom))
   }, [cluster, bounds, zoom])
 
-  const mapStyle ='mapbox://styles/mapbox/standard'
-  const mode = useThemeStore((state) => state.mode)
-  
-  useEffect(() => {
-    const map = mapRef.current?.getMap()
-    if (!map) return
-
-    map.setConfigProperty(
-      'basemap',
-      'lightPreset',
-      mode === 'dark' ? 'night' : 'day'
-    )
-  }, [mode])
-
   return (
     <MapGL
       ref={mapRef}
       mapboxAccessToken={MAPBOX_TOKEN}
       initialViewState={{
-        latitude: displayLocation.latitude,
-        longitude: displayLocation.longitude,
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
         zoom: 15,
         pitch: 50,
       }}
-      mapStyle={mapStyle}
+      mapStyle="mapbox://styles/mapbox/standard"
       styleDiffing={false}
       terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
       onMove={onMove}
@@ -183,12 +151,12 @@ export default function MapView({
     >
       <AttributionControl position="bottom-right" compact />
 
-      {/* 🔥 YOUR PLAYER (animated) */}
-      <Marker latitude={displayLocation.latitude} longitude={displayLocation.longitude} anchor="center">
+      {/* 🔥 YOU */}
+      <Marker latitude={userLocation.latitude} longitude={userLocation.longitude} anchor="center">
         <PlayerMarker facing={facing} />
       </Marker>
 
-      {/* OTHER PLAYERS (raw, no animation) */}
+      {/* OTHER PLAYERS */}
       {players.map((player) => (
         <Marker
           key={player.id}
