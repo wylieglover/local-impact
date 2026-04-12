@@ -19,18 +19,52 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
   const hasReceivedEventRef = useRef(false)
   const timeoutRef = useRef<number | null>(null)
 
+  // throttling + smoothing helpers
+  const lastUpdateRef = useRef(0)
+  const calibrationCount = useRef(0)
+  const smoothedFacing = useRef<number | null>(null)
+
   const handleOrientation = (e: DeviceOrientationEvent) => {
+    const now = performance.now()
+
+    // THROTTLE: ~20fps max (prevents 60–120Hz spam)
+    if (now - lastUpdateRef.current < 50) return
+    lastUpdateRef.current = now
+
     hasReceivedEventRef.current = true
 
+    // iOS compass shortcut
     const ios = (e as any).webkitCompassHeading
+    let rawFacing: number | null = null
+
     if (ios != null) {
-      setFacing(ios)
+      rawFacing = ios
+    } else if (e.alpha != null) {
+      rawFacing = (360 - e.alpha) % 360
+    }
+
+    if (rawFacing == null) return
+
+    // Calibration buffer (fixes “wrong direction until I spin phone”)
+    if (calibrationCount.current < 5) {
+      calibrationCount.current++
+      smoothedFacing.current = rawFacing
+      setFacing(rawFacing)
       return
     }
 
-    if (e.alpha != null) {
-      setFacing((360 - e.alpha) % 360)
+    // light smoothing (prevents jitter)
+    if (smoothedFacing.current == null) {
+      smoothedFacing.current = rawFacing
+    } else {
+      const prev = smoothedFacing.current
+
+      // shortest rotation path (avoids 359° → 0° jump glitch)
+      const diff = ((rawFacing - prev + 540) % 360) - 180
+      smoothedFacing.current = (prev + diff * 0.25 + 360) % 360
     }
+
+    setFacing(smoothedFacing.current)
   }
 
   const attachListeners = () => {
@@ -71,6 +105,7 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
           localStorage.setItem('compassPermission', 'granted')
 
           hasReceivedEventRef.current = false
+          calibrationCount.current = 0
           attachListeners()
           startValidationCheck()
         } else {
@@ -82,11 +117,11 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
         localStorage.setItem('compassPermission', 'denied')
       }
     } else {
-      // Android / desktop
       setPermissionState('granted')
       localStorage.setItem('compassPermission', 'granted')
 
       hasReceivedEventRef.current = false
+      calibrationCount.current = 0
       attachListeners()
       startValidationCheck()
     }
@@ -96,8 +131,10 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
     if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
 
     timeoutRef.current = window.setTimeout(() => {
-      // If we "think" we're granted but no events fired → it's broken (common iOS PWA issue)
-      if (permissionState === 'granted' && !hasReceivedEventRef.current) {
+      if (
+        permissionState === 'granted' &&
+        !hasReceivedEventRef.current
+      ) {
         setPermissionState('unknown')
         localStorage.removeItem('compassPermission')
         detachListeners()
@@ -115,12 +152,11 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
       return
     }
 
-    // If we THINK we are granted, try activating
     if (permissionState === 'granted') {
       hasReceivedEventRef.current = false
+      calibrationCount.current = 0
       attachListeners()
 
-      // if nothing comes in shortly, treat as "not active"
       setTimeout(() => {
         if (!hasReceivedEventRef.current) {
           setPermissionState('unknown')
@@ -128,12 +164,12 @@ export function useDeviceFacing(): UseDeviceFacingReturn {
       }, 1500)
     }
 
-    // Non-iOS auto-enable
     if (!needsPermission && permissionState !== 'granted') {
       setPermissionState('granted')
       localStorage.setItem('compassPermission', 'granted')
 
       hasReceivedEventRef.current = false
+      calibrationCount.current = 0
       attachListeners()
     }
 
