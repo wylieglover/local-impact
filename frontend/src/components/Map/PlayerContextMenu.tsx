@@ -9,15 +9,16 @@ type Props = {
   friendRequests: FriendRequest[]
   sentRequests: SentRequest[]
   onSentRequest?: (req: SentRequest) => void
+  onAccepted?: (userId: string) => void
+  onDeclined?: (userId: string) => void
   onViewProfile: () => void
   onClose: () => void
 }
 
-export default function PlayerContextMenu({ username, userId, position, friends, friendRequests, sentRequests, onSentRequest, onViewProfile, onClose }: Props) {
-  return (  
+export default function PlayerContextMenu({ username, userId, position, friends, friendRequests, sentRequests, onSentRequest, onAccepted, onDeclined, onViewProfile, onClose }: Props) {
+  return (
     <>
       <div className="absolute inset-0 z-[150]" onClick={onClose} />
-
       <div
         className="absolute z-[151] animate-in fade-in zoom-in-95 duration-150"
         style={{ left: position.x + 30, top: position.y }}
@@ -27,7 +28,6 @@ export default function PlayerContextMenu({ username, userId, position, friends,
             <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Operative</p>
             <p className="text-sm font-black text-sky-400 uppercase tracking-tight">@{username}</p>
           </div>
-
           <div className="p-1.5 flex flex-col gap-0.5">
             <div className="px-1.5 pt-1 pb-0.5">
               <FriendButton
@@ -36,10 +36,11 @@ export default function PlayerContextMenu({ username, userId, position, friends,
                 friendRequests={friendRequests}
                 sentRequests={sentRequests}
                 onSentRequest={onSentRequest}
+                onAccepted={onAccepted}
+                onDeclined={onDeclined}
                 onAction={onClose}
               />
             </div>
-
             <button
               onClick={onViewProfile}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-800 transition-all text-left group"

@@ -50,6 +50,55 @@ export default function MapView({
   const [zoom, setZoom] = useState(15)
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null)
 
+  // 🔥 Smooth visual location (animation layer)
+  const [displayLocation, setDisplayLocation] = useState(userLocation)
+  const animationRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!userLocation) return
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current)
+    }
+
+    const animate = () => {
+      setDisplayLocation((prev) => {
+        if (!prev) return userLocation
+
+        const lerp = 0.15 // tune this (0.1 = smoother, 0.25 = snappier)
+
+        return {
+          latitude: prev.latitude + (userLocation.latitude - prev.latitude) * lerp,
+          longitude: prev.longitude + (userLocation.longitude - prev.longitude) * lerp,
+        }
+      })
+
+      animationRef.current = requestAnimationFrame(animate)
+    }
+
+    animate()
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current)
+    }
+  }, [userLocation.latitude, userLocation.longitude])
+
+  // 🧠 OPTIONAL: smooth camera follow (disabled by default)
+  const isFollowMode = false
+
+  useEffect(() => {
+    if (!isFollowMode || !displayLocation) return
+
+    const map = mapRef.current?.getMap()
+    if (!map) return
+
+    map.easeTo({
+      center: [displayLocation.longitude, displayLocation.latitude],
+      duration: 800,
+      easing: (t) => t,
+    })
+  }, [displayLocation])
+
   const onMove = useCallback(() => {
     const map = mapRef.current?.getMap()
     if (!map) return
@@ -107,8 +156,8 @@ export default function MapView({
       ref={mapRef}
       mapboxAccessToken={MAPBOX_TOKEN}
       initialViewState={{
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
+        latitude: displayLocation.latitude,
+        longitude: displayLocation.longitude,
         zoom: 15,
         pitch: 50,
       }}
@@ -134,10 +183,12 @@ export default function MapView({
     >
       <AttributionControl position="bottom-right" compact />
 
-      <Marker latitude={userLocation.latitude} longitude={userLocation.longitude} anchor="center">
+      {/* 🔥 YOUR PLAYER (animated) */}
+      <Marker latitude={displayLocation.latitude} longitude={displayLocation.longitude} anchor="center">
         <PlayerMarker facing={facing} />
       </Marker>
 
+      {/* OTHER PLAYERS (raw, no animation) */}
       {players.map((player) => (
         <Marker
           key={player.id}

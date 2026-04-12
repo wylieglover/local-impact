@@ -224,8 +224,25 @@ export default function DashboardPage() {
           position={contextPosition}
           friends={friends}
           friendRequests={friendRequests}
-          onSentRequest={addSentRequest}
           sentRequests={sentRequests}
+          onSentRequest={addSentRequest}
+          onAccepted={(userId) => {
+            const req = friendRequests.find((r) => r.sender_id === userId)
+            if (req) {
+              addFriend({
+                id: req.sender_id,
+                username: req.username,
+                avatar_url: req.avatar_url,
+                level: req.level,
+                points: 0,
+                presence: "online",
+                last_seen: new Date().toISOString(),
+              })
+            }
+          }}
+          onDeclined={(userId) => {
+            declineRequest(userId)
+          }}
           onClose={() => { setContextPlayer(null); setContextPosition(null) }}
           onViewProfile={() => {
             setProfileUserId(contextPlayer.id)
@@ -244,6 +261,23 @@ export default function DashboardPage() {
           friendRequests={friendRequests}
           sentRequests={sentRequests}
           onSentRequest={addSentRequest}
+          onAccepted={(userId) => {
+            const req = friendRequests.find((r) => r.sender_id === userId)
+            if (req) {
+              addFriend({
+                id: req.sender_id,
+                username: req.username,
+                avatar_url: req.avatar_url,
+                level: req.level,
+                points: 0,
+                presence: "online",
+                last_seen: new Date().toISOString(),
+              })
+            }
+          }}
+          onDeclined={(userId) => {
+            declineRequest(userId)
+          }}
         />
       )}
 
