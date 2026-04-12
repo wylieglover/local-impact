@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
 .mapboxgl-marker {
-  transition: transform 0.2s linear;
+  transition: transform 0.25s linear;
   will-change: transform;
 }
