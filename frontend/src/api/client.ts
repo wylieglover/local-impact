@@ -1,6 +1,5 @@
 import axios from "axios"
 import { useAuthStore } from "../stores/auth.store"
-import { plainClient } from "./plainClient"
 import { authApi } from "./auth.api"
 
 export const apiClient = axios.create({

@@ -1,15 +1,13 @@
-import { plainClient } from "../api/plainClient"
 import { useEffect, useState, useRef } from "react"
 import { useAuthStore } from "../stores/auth.store"
 import { authApi } from "../api/auth.api"
+
 type Props = {
   children: React.ReactNode
 }
 
   export default function AuthInitializer({ children }: Props) {
     const [ready, setReady] = useState(false)
-    const setAuth = useAuthStore((state) => state.setAuth)
-    const clearAuth = useAuthStore((state) => state.clearAuth)
     const hasRun = useRef(false)
 
     useEffect(() => {
@@ -18,21 +16,9 @@ type Props = {
 
       const initialize = async () => {
         try {
-          const { data } = await plainClient.post("/auth/refresh")
-          const newToken = data.data.accessToken
-          const refreshedUser = data.data.user
-
-          setAuth(newToken, {
-            userId: refreshedUser.id,
-            username: refreshedUser.username,
-            role: refreshedUser.role,
-            points: refreshedUser.points ?? 0,
-            experience: refreshedUser.experience ?? 0,
-            level: refreshedUser.level ?? 1,
-          })
+          await authApi.refreshSession();
         } catch {
-          // Refresh failed — no valid session, clear anything stale
-          clearAuth()
+          useAuthStore.getState().clearAuth();
         } finally {
           setReady(true)
         }

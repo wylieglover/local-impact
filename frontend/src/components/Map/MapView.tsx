@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapGL, {
   Marker,
-  Source,
   AttributionControl,
   type MapRef,
 } from 'react-map-gl/mapbox'
