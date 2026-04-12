@@ -59,7 +59,12 @@ export function usePlayerLocation() {
           if (dt > 0) {
             const distance = getDistanceMeters(lastRaw.current, currentRaw)
             const calculatedSpeed = distance / dt
+            const actualSpeed = speed ?? calculatedSpeed
 
+            if (distance < 3 && actualSpeed < 0.5) {
+              lastRaw.current = { ...lastRaw.current, time: now }
+              return // Throw it away, don't update React state
+            }
             // If moving faster than ~30 m/s (~67 mph), likely GPS spike
             if (calculatedSpeed > 30) {
               // update time so we don't freeze, but ignore position
@@ -68,8 +73,6 @@ export function usePlayerLocation() {
             }
 
             // 🔮 Light forward prediction (only when moving)
-            const actualSpeed = speed ?? calculatedSpeed
-
             if (actualSpeed > 1 && heading !== null) {
               const predictionTime = 0.4
               const distanceAhead = actualSpeed * predictionTime
