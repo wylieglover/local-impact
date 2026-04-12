@@ -51,6 +51,7 @@ export default function DashboardPage() {
     loading: friendsLoading,
     addFriend,
     removeFriend: removeFriendFromList,
+    refresh: refreshFriends
   } = useFriends()
 
   const {
@@ -60,7 +61,7 @@ export default function DashboardPage() {
     addRequest,
     addSentRequest,
     removeSentRequest,
-    acceptRequest,
+    removeRequest,
     declineRequest,
   } = useFriendRequests()
 
@@ -106,9 +107,7 @@ export default function DashboardPage() {
     setContextPosition(position)
   }, [])
 
-  const handleAcceptRequest = useCallback(async (userId: string) => {
-    await acceptRequest(userId)
-    // Find the request to build a provisional Friend entry
+  const handleFriendAccepted = useCallback(async (userId: string) => {
     const req = friendRequests.find((r) => r.sender_id === userId)
     if (req) {
       addFriend({
@@ -121,7 +120,13 @@ export default function DashboardPage() {
         last_seen: new Date().toISOString(),
       })
     }
-  }, [acceptRequest, friendRequests, addFriend])
+    removeRequest(userId)
+    refreshFriends()  // no await
+  }, [friendRequests, addFriend, removeRequest, refreshFriends])
+
+  const handleFriendDeclined = useCallback(async (userId: string) => {
+    declineRequest(userId)
+  }, [declineRequest])
 
   const handleFormSubmit = useCallback(async (description: string, photo: File) => {
     if (!pendingPin || !user) return
@@ -185,7 +190,7 @@ export default function DashboardPage() {
       {permissionState !== 'granted' && permissionState !== 'unavailable' && (
         <button
           onClick={requestPermission}
-          className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-slate-900/90 border border-emerald-500/30 text-emerald-400 text-[10px] font-black tracking-widest uppercase px-4 py-2 rounded-xl backdrop-blur-sm"
+          className="absolute top-40 left-1/2 -translate-x-1/2 z-20 bg-slate-900/90 border border-emerald-500/30 text-emerald-400 text-[10px] font-black tracking-widest uppercase px-4 py-2 rounded-xl backdrop-blur-sm"
         >
           Enable Compass
         </button>
@@ -226,23 +231,8 @@ export default function DashboardPage() {
           friendRequests={friendRequests}
           sentRequests={sentRequests}
           onSentRequest={addSentRequest}
-          onAccepted={(userId) => {
-            const req = friendRequests.find((r) => r.sender_id === userId)
-            if (req) {
-              addFriend({
-                id: req.sender_id,
-                username: req.username,
-                avatar_url: req.avatar_url,
-                level: req.level,
-                points: 0,
-                presence: "online",
-                last_seen: new Date().toISOString(),
-              })
-            }
-          }}
-          onDeclined={(userId) => {
-            declineRequest(userId)
-          }}
+          onAccepted={handleFriendAccepted}
+          onDeclined={handleFriendDeclined}
           onClose={() => { setContextPlayer(null); setContextPosition(null) }}
           onViewProfile={() => {
             setProfileUserId(contextPlayer.id)
@@ -261,23 +251,8 @@ export default function DashboardPage() {
           friendRequests={friendRequests}
           sentRequests={sentRequests}
           onSentRequest={addSentRequest}
-          onAccepted={(userId) => {
-            const req = friendRequests.find((r) => r.sender_id === userId)
-            if (req) {
-              addFriend({
-                id: req.sender_id,
-                username: req.username,
-                avatar_url: req.avatar_url,
-                level: req.level,
-                points: 0,
-                presence: "online",
-                last_seen: new Date().toISOString(),
-              })
-            }
-          }}
-          onDeclined={(userId) => {
-            declineRequest(userId)
-          }}
+          onAccepted={handleFriendAccepted}
+          onDeclined={handleFriendDeclined}
         />
       )}
 
@@ -293,8 +268,8 @@ export default function DashboardPage() {
           friendsLoading={friendsLoading}
           requests={friendRequests}
           requestsLoading={requestsLoading}
-          onAcceptRequest={handleAcceptRequest}
-          onDeclineRequest={declineRequest}
+          onAcceptRequest={handleFriendAccepted}
+          onDeclineRequest={handleFriendDeclined}
         />
       )}
     </div>

@@ -12,7 +12,7 @@ type Props = {
   onDeclined?: (userId: string) => void
 }
 
-export default function FriendButton({ userId, friends, friendRequests, sentRequests, onAction, onSentRequest, onAccepted, onDeclined }: Props) {
+export default function FriendButton({ userId, friends, friendRequests, sentRequests, onSentRequest, onAccepted, onDeclined }: Props) {
   const { state, sendRequest, acceptRequest, removeFriend, error } = useFriendship(
     userId, friends, friendRequests, sentRequests, onSentRequest
   )
@@ -23,12 +23,10 @@ export default function FriendButton({ userId, friends, friendRequests, sentRequ
   const handleAccept = async () => {
     await acceptRequest()
     onAccepted?.(userId)
-    onAction?.()
   }
   const handleRemove = async () => {
     await removeFriend()
     onDeclined?.(userId)
-    onAction?.()
   }
 
   if (state === "loading") return null

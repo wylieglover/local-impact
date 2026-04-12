@@ -9,6 +9,7 @@ type UseFriendRequestsReturn = {
   error: string | null
   addRequest: (request: FriendRequest) => void
   addSentRequest: (request: SentRequest) => void
+  removeRequest: (userId: string) => void
   removeSentRequest: (userId: string) => void
   acceptRequest: (userId: string) => Promise<void>
   declineRequest: (userId: string) => Promise<void>
@@ -59,6 +60,10 @@ export function useFriendRequests(): UseFriendRequestsReturn {
     setSentRequests((prev) => prev.filter((r) => r.receiver_id !== userId))
   }, [])
 
+  const removeRequest = useCallback((senderId: string) => {
+    setRequests((prev) => prev.filter((r) => r.sender_id !== senderId))
+  }, [])
+
   const acceptRequest = useCallback(async (userId: string) => {
     await friendshipApi.acceptRequest(userId)
     setRequests((prev) => prev.filter((r) => r.sender_id !== userId))
@@ -76,6 +81,7 @@ export function useFriendRequests(): UseFriendRequestsReturn {
     error,
     addRequest,
     addSentRequest,
+    removeRequest,
     removeSentRequest,
     acceptRequest,
     declineRequest,
